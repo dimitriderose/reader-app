@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader — Auth Mockup</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ========================================
+           THEME SYSTEM (Light / Sepia / Dark)
+           ======================================== */
+        :root {
+            --bg: #FAFAF7;
+            --bg-outer: #EEEEE8;
+            --surface: #FFFFFF;
+            --surface-2: #F0EFEB;
+            --text: #1A1A1A;
+            --text-muted: #7A7A72;
+            --border: #E5E5E0;
+            --accent: #3D3D3D;
+            --accent-hover: #111111;
+            --error: #DC3545;
+            --error-bg: #FEF2F2;
+            --radius: 12px;
+            --font-reading: 'Source Serif 4', Georgia, serif;
+            --font-ui: 'Inter', -apple-system, sans-serif;
+            --header-h: 52px;
+        }
+
+        [data-theme="sepia"] {
+            --bg: #F2E8D5;
+            --bg-outer: #E5D9C3;
+            --surface: #FAF4E6;
+            --surface-2: #EDE3CF;
+            --text: #3D3226;
+            --text-muted: #8A7E6C;
+            --border: #DDD0B8;
+            --accent: #5C4A32;
+            --accent-hover: #3D3226;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1A1A1A;
+            --bg-outer: #111111;
+            --surface: #222222;
+            --surface-2: #2A2A2A;
+            --text: #E0DDD5;
+            --text-muted: #8A8A82;
+            --border: #333330;
+            --accent: #D5D0C4;
+            --accent-hover: #FFFFFF;
+            --error: #FF6B6B;
+            --error-bg: #2D1515;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.4s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========================================
+           HEADER
+           ======================================== */
+        .header {
+            height: var(--header-h);
+            min-height: var(--header-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--font-reading);
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .signin-btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 7px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .signin-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Theme dots */
+        .theme-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .theme-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .theme-dot:hover { transform: scale(1.15); }
+
+        .theme-dot.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .theme-dot.t-light { background: #FAFAF7; }
+        .theme-dot.t-sepia { background: #F2E8D5; }
+        .theme-dot.t-dark { background: #1A1A1A; }
+
+        /* ========================================
+           PREVIEW STATE BUTTONS (top bar)
+           ======================================== */
+        .preview-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 101;
+        }
+
+        .preview-bar-label {
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        .preview-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .preview-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+        .preview-btn.active {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+
+        /* ========================================
+           INPUT VIEW (background)
+           ======================================== */
+        .main-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .input-view {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 56px 20px;
+            width: 100%;
+        }
+
+        .input-view .title {
+            font-family: var(--font-reading);
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .input-view .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+
+        /* Segmented control */
+        .segmented {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 28px;
+        }
+
+        .seg-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 9px 0;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seg-btn:hover { color: var(--text); }
+
+        .seg-btn.active {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .field { margin-bottom: 20px; }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .text-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .text-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .action-btn:hover { background: var(--accent-hover); }
+
+        /* ========================================
+           MODAL OVERLAY
+           ======================================== */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-backdrop.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 36px 32px 32px;
+            position: relative;
+            transform: translateY(20px) scale(0.97);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        .modal-backdrop.visible .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        /* ========================================
+           AUTH FORM SHARED STYLES
+           ======================================== */
+        .auth-state { display: none; }
+        .auth-state.active { display: block; }
+
+        .auth-title {
+            font-family: var(--font-reading);
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+        }
+
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        /* OAuth buttons */
+        .oauth-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .oauth-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            height: 46px;
+            border-radius: 10px;
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+        }
+
+        .oauth-btn svg {
+            flex-shrink: 0;
+        }
+
+        .oauth-btn-google {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .oauth-btn-google:hover {
+            border-color: var(--text-muted);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .oauth-btn-github {
+            background: #24292e;
+            color: #ffffff;
+        }
+
+        .oauth-btn-github:hover {
+            background: #1b1f23;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        [data-theme="dark"] .oauth-btn-github {
+            background: #f0f0f0;
+            color: #24292e;
+        }
+        [data-theme="dark"] .oauth-btn-github:hover {
+            background: #ffffff;
+        }
+        [data-theme="dark"] .oauth-btn-github svg path {
+            fill: #24292e;
+        }
+
+        /* Divider */
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .auth-divider span {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Auth form fields */
+        .auth-field {
+            margin-bottom: 18px;
+        }
+
+        .auth-field-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .auth-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .auth-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+        /* Error state */
+        .auth-input.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px var(--error-bg);
+        }
+
+        .auth-input.error:focus {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px var(--error-bg);
+        }
+
+        .field-error {
+            font-size: 0.75rem;
+            color: var(--error);
+            margin-top: 6px;
+            display: none;
+        }
+
+        .field-error.visible {
+            display: block;
+        }
+
+        .field-helper {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* Remember + Forgot row */
+        .auth-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .auth-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            color: var(--text);
+        }
+
+        .auth-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .auth-link-muted {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.15s;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            padding: 0;
+        }
+
+        .auth-link-muted:hover {
+            color: var(--text);
+            text-decoration: underline;
+        }
+
+        /* Primary auth button */
+        .auth-submit {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .auth-submit:hover { background: var(--accent-hover); }
+
+        .auth-submit.loading {
+            pointer-events: none;
+            color: transparent;
+        }
+
+        .auth-submit.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-top-color: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Bottom switch text */
+        .auth-switch {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .auth-switch-link {
+            color: var(--text);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.15s;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            padding: 0;
+        }
+
+        .auth-switch-link:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* ========================================
+           SIGN-IN PROMPT (lighter modal)
+           ======================================== */
+        /* ========================================
+           FORGOT PASSWORD STATE
+           ======================================== */
+        .forgot-icon {
+            text-align: center;
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .forgot-success {
+            display: none;
+            text-align: center;
+            padding: 8px 0 4px;
+        }
+
+        .forgot-success.visible {
+            display: block;
+        }
+
+        .forgot-success-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #E8F5E9;
+            color: #51CF66;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        [data-theme="dark"] .forgot-success-icon {
+            background: #1B3A1B;
+        }
+
+        .forgot-success-title {
+            font-family: var(--font-reading);
+            font-size: 1.3rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .forgot-success-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-bottom: 24px;
+        }
+
+        .forgot-back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.15s;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            padding: 0;
+        }
+
+        .forgot-back-link:hover {
+            color: var(--text);
+        }
+
+        .forgot-back-link svg {
+            flex-shrink: 0;
+        }
+
+        .prompt-title {
+            font-family: var(--font-reading);
+            font-size: 1.35rem;
+            font-weight: 300;
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .prompt-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 28px;
+            line-height: 1.55;
+            text-align: center;
+        }
+
+        .prompt-email-link {
+            display: block;
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: color 0.15s;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            padding: 0;
+            width: 100%;
+        }
+
+        .prompt-email-link:hover {
+            color: var(--text);
+            text-decoration: underline;
+        }
+
+        .prompt-dismiss {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: var(--font-ui);
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .prompt-dismiss:hover {
+            border-color: var(--text-muted);
+            color: var(--text);
+        }
+
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 640px) {
+            .input-view { padding: 32px 16px; }
+            .input-view .title { font-size: 1.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            .modal-backdrop {
+                align-items: stretch;
+            }
+
+            .modal-backdrop.visible {
+                background: transparent;
+            }
+
+            .modal {
+                max-width: none;
+                max-height: none;
+                height: 100%;
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+                padding: 36px 20px 32px;
+                overflow-y: auto;
+            }
+
+            .modal-backdrop.visible .modal {
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @media (max-width: 400px) {
+            .header { padding: 0 12px; }
+
+            .preview-bar {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .preview-btn {
+                font-size: 0.68rem;
+                padding: 4px 9px;
+            }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- PREVIEW STATE BUTTONS -->
+    <div class="preview-bar">
+        <span class="preview-bar-label">Preview:</span>
+        <button class="preview-btn active" data-state="signin">Sign In</button>
+        <button class="preview-btn" data-state="register">Create Account</button>
+        <button class="preview-btn" data-state="forgot">Forgot Password</button>
+        <button class="preview-btn" data-state="prompt">Sign In Prompt</button>
+        <button class="preview-btn" data-state="closed">Closed</button>
+    </div>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo">Reader</div>
+        <div class="header-right">
+            <div class="theme-dots">
+                <div class="theme-dot t-light active" data-theme="" title="Light"></div>
+                <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
+                <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+            </div>
+            <button class="signin-btn" id="headerSignin">Sign in</button>
+        </div>
+    </header>
+
+    <!-- INPUT VIEW (background) -->
+    <div class="main-area" id="inputView">
+        <div class="input-view">
+            <h1 class="title">What would you like to read?</h1>
+            <p class="subtitle">Paste a link, upload a file, or type directly.</p>
+
+            <div class="segmented" role="tablist">
+                <button class="seg-btn active" data-panel="panel-url" role="tab" aria-selected="true">URL</button>
+                <button class="seg-btn" data-panel="panel-file" role="tab" aria-selected="false">Upload</button>
+                <button class="seg-btn" data-panel="panel-text" role="tab" aria-selected="false">Paste</button>
+            </div>
+
+            <div class="panel active" id="panel-url">
+                <div class="field">
+                    <label class="field-label" for="urlInput">Web address</label>
+                    <input type="url" class="text-input" id="urlInput" placeholder="https://example.com/article">
+                </div>
+                <button class="action-btn">Fetch article</button>
+            </div>
+
+            <div class="panel" id="panel-file">
+                <div class="field">
+                    <label class="field-label">File</label>
+                    <div style="border: 2px dashed var(--border); border-radius: var(--radius); padding: 44px 24px; text-align: center; background: var(--surface);">
+                        <div style="font-size: 1.8rem; margin-bottom: 10px; opacity: 0.35;">&#128196;</div>
+                        <div style="color: var(--text-muted); font-size: 0.85rem;"><strong style="color: var(--text);">Click to choose</strong> or drag a file here<br>.txt, .html</div>
+                    </div>
+                </div>
+                <button class="action-btn" disabled>Load file</button>
+            </div>
+
+            <div class="panel" id="panel-text">
+                <div class="field">
+                    <label class="field-label" for="pasteInput">Your text</label>
+                    <textarea class="text-input" id="pasteInput" placeholder="Paste or type your text here..." style="min-height: 180px; resize: vertical; line-height: 1.6;"></textarea>
+                </div>
+                <button class="action-btn">Start reading</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BACKDROP -->
+    <div class="modal-backdrop visible" id="modalBackdrop">
+        <div class="modal" id="modal">
+            <button class="modal-close" id="modalClose" aria-label="Close">&#10005;</button>
+
+            <!-- STATE: Sign In -->
+            <div class="auth-state active" id="stateSignin">
+                <h2 class="auth-title">Welcome back</h2>
+                <p class="auth-subtitle">Sign in to access your library</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <div class="auth-divider"><span>or</span></div>
+
+                <form id="signinForm" novalidate>
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="signinEmail">Email</label>
+                        <input type="email" class="auth-input" id="signinEmail" placeholder="you@example.com" autocomplete="email">
+                        <div class="field-error" id="signinEmailError">Please enter your email address</div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="signinPassword">Password</label>
+                        <input type="password" class="auth-input" id="signinPassword" placeholder="Enter your password" autocomplete="current-password">
+                        <div class="field-error" id="signinPasswordError">Please enter your password</div>
+                    </div>
+
+                    <div class="auth-row">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" checked>
+                            Remember me
+                        </label>
+                        <button type="button" class="auth-link-muted">Forgot password?</button>
+                    </div>
+
+                    <button type="submit" class="auth-submit" id="signinSubmit">Sign in</button>
+                </form>
+
+                <div class="auth-switch">
+                    Don't have an account? <button class="auth-switch-link" data-goto="register">Create one</button>
+                </div>
+            </div>
+
+            <!-- STATE: Create Account -->
+            <div class="auth-state" id="stateRegister">
+                <h2 class="auth-title">Create your account</h2>
+                <p class="auth-subtitle">Start saving and organizing your reading</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <div class="auth-divider"><span>or</span></div>
+
+                <form id="registerForm" novalidate>
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerName">Display name</label>
+                        <input type="text" class="auth-input" id="registerName" placeholder="Your name" autocomplete="name">
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerEmail">Email</label>
+                        <input type="email" class="auth-input" id="registerEmail" placeholder="you@example.com" autocomplete="email">
+                        <div class="field-error" id="registerEmailError">Please enter your email address</div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerPassword">Password</label>
+                        <input type="password" class="auth-input" id="registerPassword" placeholder="Create a password" autocomplete="new-password">
+                        <div class="field-error" id="registerPasswordError">Please enter a password</div>
+                        <div class="field-helper">At least 8 characters</div>
+                    </div>
+
+                    <button type="submit" class="auth-submit" id="registerSubmit">Create account</button>
+                </form>
+
+                <div class="auth-switch">
+                    Already have an account? <button class="auth-switch-link" data-goto="signin">Sign in</button>
+                </div>
+            </div>
+
+            <!-- STATE: Forgot Password -->
+            <div class="auth-state" id="stateForgot">
+                <button class="forgot-back-link" data-goto="signin">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Back to sign in
+                </button>
+
+                <div id="forgotForm" style="margin-top: 20px;">
+                    <div class="forgot-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="5" width="18" height="14" rx="2"/>
+                            <polyline points="3 7 12 13 21 7"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title" style="text-align:center;">Reset your password</h2>
+                    <p class="auth-subtitle" style="text-align:center;">Enter the email you signed up with and we'll send a reset link.</p>
+
+                    <form id="forgotFormEl" novalidate>
+                        <div class="auth-field">
+                            <label class="auth-field-label" for="forgotEmail">Email</label>
+                            <input type="email" class="auth-input" id="forgotEmail" placeholder="you@example.com" autocomplete="email">
+                            <div class="field-error" id="forgotEmailError">Please enter your email address</div>
+                        </div>
+
+                        <button type="submit" class="auth-submit" id="forgotSubmit">Send reset link</button>
+                    </form>
+                </div>
+
+                <div class="forgot-success" id="forgotSuccess">
+                    <div class="forgot-success-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    </div>
+                    <h2 class="forgot-success-title">Check your email</h2>
+                    <p class="forgot-success-text">We sent a password reset link to <strong id="forgotSentEmail">you@example.com</strong>. Check your inbox and follow the link to reset your password.</p>
+                    <button type="button" class="auth-submit" data-goto="signin">Return to sign in</button>
+                </div>
+            </div>
+
+            <!-- STATE: Sign In Prompt -->
+            <div class="auth-state" id="statePrompt">
+                <h2 class="prompt-title">Sign in to save</h2>
+                <p class="prompt-subtitle">Create a free account to save articles and sync across devices.</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <button type="button" class="prompt-email-link" data-goto="signin">or sign in with email</button>
+
+                <button type="button" class="prompt-dismiss" id="promptDismiss">Maybe later</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ==========================================
+        // THEME (persisted to localStorage)
+        // ==========================================
+        const savedTheme = localStorage.getItem('reader-v2-theme') || '';
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.querySelectorAll('.theme-dot').forEach(dot => {
+            if (dot.dataset.theme === savedTheme) {
+                document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+            }
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                document.documentElement.setAttribute('data-theme', dot.dataset.theme);
+                localStorage.setItem('reader-v2-theme', dot.dataset.theme);
+            });
+        });
+
+        // ==========================================
+        // SEGMENTED TABS (background input view)
+        // ==========================================
+        document.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.seg-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                document.getElementById(btn.dataset.panel).classList.add('active');
+            });
+        });
+
+        // ==========================================
+        // MODAL MANAGEMENT
+        // ==========================================
+        const backdrop = document.getElementById('modalBackdrop');
+        const modal = document.getElementById('modal');
+        const stateSignin = document.getElementById('stateSignin');
+        const stateRegister = document.getElementById('stateRegister');
+        const stateForgot = document.getElementById('stateForgot');
+        const statePrompt = document.getElementById('statePrompt');
+
+        function showState(stateName) {
+            // Hide all auth states
+            document.querySelectorAll('.auth-state').forEach(s => s.classList.remove('active'));
+
+            // Clear any error states
+            clearErrors();
+
+            // Reset loading states
+            document.querySelectorAll('.auth-submit').forEach(btn => btn.classList.remove('loading'));
+
+            // Reset forgot password to form (not success)
+            if (stateName === 'forgot') {
+                document.getElementById('forgotForm').style.display = '';
+                document.getElementById('forgotSuccess').classList.remove('visible');
+            }
+
+            // Show the requested state
+            if (stateName === 'signin') {
+                stateSignin.classList.add('active');
+                backdrop.classList.add('visible');
+            } else if (stateName === 'register') {
+                stateRegister.classList.add('active');
+                backdrop.classList.add('visible');
+            } else if (stateName === 'forgot') {
+                stateForgot.classList.add('active');
+                backdrop.classList.add('visible');
+            } else if (stateName === 'prompt') {
+                statePrompt.classList.add('active');
+                backdrop.classList.add('visible');
+            } else {
+                // closed
+                backdrop.classList.remove('visible');
+            }
+
+            // Update preview buttons
+            document.querySelectorAll('.preview-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.state === stateName);
+            });
+        }
+
+        function closeModal() {
+            showState('closed');
+        }
+
+        // Close button
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+
+        // Backdrop click closes modal
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeModal();
+        });
+
+        // Escape key closes modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && backdrop.classList.contains('visible')) {
+                closeModal();
+            }
+        });
+
+        // Dismiss prompt
+        document.getElementById('promptDismiss').addEventListener('click', closeModal);
+
+        // Switch between states (links within the modal)
+        document.querySelectorAll('[data-goto]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                showState(link.dataset.goto);
+            });
+        });
+
+        // ==========================================
+        // PREVIEW BAR BUTTONS
+        // ==========================================
+        document.querySelectorAll('.preview-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showState(btn.dataset.state);
+            });
+        });
+
+        // ==========================================
+        // FORM VALIDATION
+        // ==========================================
+        function clearErrors() {
+            document.querySelectorAll('.auth-input').forEach(input => input.classList.remove('error'));
+            document.querySelectorAll('.field-error').forEach(err => err.classList.remove('visible'));
+        }
+
+        function showFieldError(inputId, errorId) {
+            const input = document.getElementById(inputId);
+            const error = document.getElementById(errorId);
+            if (input) input.classList.add('error');
+            if (error) error.classList.add('visible');
+        }
+
+        // Clear error on input focus
+        document.querySelectorAll('.auth-input').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.classList.remove('error');
+                const errorEl = input.parentElement.querySelector('.field-error');
+                if (errorEl) errorEl.classList.remove('visible');
+            });
+        });
+
+        // Header Sign In button
+        document.getElementById('headerSignin').addEventListener('click', () => {
+            showState('signin');
+        });
+
+        // Forgot password link → show forgot state
+        document.querySelector('.auth-link-muted').addEventListener('click', () => {
+            showState('forgot');
+        });
+
+        // Forgot password form submission
+        document.getElementById('forgotFormEl').addEventListener('submit', (e) => {
+            e.preventDefault();
+            clearErrors();
+
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email) {
+                showFieldError('forgotEmail', 'forgotEmailError');
+                return;
+            }
+
+            const btn = document.getElementById('forgotSubmit');
+            btn.classList.add('loading');
+
+            // Simulate API call
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                document.getElementById('forgotForm').style.display = 'none';
+                document.getElementById('forgotSentEmail').textContent = email;
+                document.getElementById('forgotSuccess').classList.add('visible');
+            }, 1500);
+        });
+
+        // Sign In form submission
+        document.getElementById('signinForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            clearErrors();
+
+            const email = document.getElementById('signinEmail').value.trim();
+            const password = document.getElementById('signinPassword').value;
+            let hasError = false;
+
+            if (!email) {
+                showFieldError('signinEmail', 'signinEmailError');
+                hasError = true;
+            }
+
+            if (!password) {
+                showFieldError('signinPassword', 'signinPasswordError');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Show loading spinner
+            const btn = document.getElementById('signinSubmit');
+            btn.classList.add('loading');
+
+            // Simulate API call
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                closeModal();
+            }, 2000);
+        });
+
+        // Register form submission
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            clearErrors();
+
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            let hasError = false;
+
+            if (!email) {
+                showFieldError('registerEmail', 'registerEmailError');
+                hasError = true;
+            }
+
+            if (!password) {
+                showFieldError('registerPassword', 'registerPasswordError');
+                hasError = true;
+            } else if (password.length < 8) {
+                document.getElementById('registerPasswordError').textContent = 'Password must be at least 8 characters';
+                showFieldError('registerPassword', 'registerPasswordError');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Show loading spinner
+            const btn = document.getElementById('registerSubmit');
+            btn.classList.add('loading');
+
+            // Simulate API call
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                closeModal();
+            }, 2000);
+        });
+
+        // ==========================================
+        // INITIALIZE — show sign-in by default
+        // ==========================================
+        showState('signin');
+
+    })();
+    </script>
+
+</body>
+</html>

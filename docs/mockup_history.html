@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader — Reading History</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ========================================
+           THEME SYSTEM (Light / Sepia / Dark)
+           ======================================== */
+        :root {
+            --bg: #FAFAF7;
+            --bg-outer: #EEEEE8;
+            --surface: #FFFFFF;
+            --surface-2: #F0EFEB;
+            --text: #1A1A1A;
+            --text-muted: #7A7A72;
+            --border: #E5E5E0;
+            --accent: #3D3D3D;
+            --accent-hover: #111111;
+            --error: #DC3545;
+            --save-color: #D4A843;
+            --radius: 12px;
+            --font-reading: 'Source Serif 4', Georgia, serif;
+            --font-ui: 'Inter', -apple-system, sans-serif;
+            --header-h: 52px;
+        }
+
+        [data-theme="sepia"] {
+            --bg: #F2E8D5;
+            --bg-outer: #E5D9C3;
+            --surface: #FAF4E6;
+            --surface-2: #EDE3CF;
+            --text: #3D3226;
+            --text-muted: #8A7E6C;
+            --border: #DDD0B8;
+            --accent: #5C4A32;
+            --accent-hover: #3D3226;
+            --save-color: #B8860B;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1A1A1A;
+            --bg-outer: #111111;
+            --surface: #222222;
+            --surface-2: #2A2A2A;
+            --text: #E0DDD5;
+            --text-muted: #8A8A82;
+            --border: #333330;
+            --accent: #D5D0C4;
+            --accent-hover: #FFFFFF;
+            --error: #FF6B6B;
+            --save-color: #E8BD5A;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.4s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========================================
+           HEADER
+           ======================================== */
+        .header {
+            height: var(--header-h);
+            min-height: var(--header-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--font-reading);
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-link {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            background: var(--surface-2);
+        }
+
+        .nav-link.active {
+            color: var(--text);
+            font-weight: 600;
+            background: var(--surface-2);
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        /* Theme dots */
+        .theme-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .theme-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .theme-dot:hover { transform: scale(1.15); }
+
+        .theme-dot.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .theme-dot.t-light { background: #FAFAF7; }
+        .theme-dot.t-sepia { background: #F2E8D5; }
+        .theme-dot.t-dark { background: #1A1A1A; }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .user-avatar:hover {
+            border-color: var(--text-muted);
+        }
+
+        /* ========================================
+           MAIN CONTENT
+           ======================================== */
+        .main-area {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .page-container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 32px 20px 64px;
+        }
+
+        /* ========================================
+           PAGE HEADER
+           ======================================== */
+        .page-header {
+            margin-bottom: 28px;
+        }
+
+        .page-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .page-title {
+            font-family: var(--font-reading);
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .clear-all-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+
+        .clear-all-btn:hover {
+            color: var(--error);
+            background: color-mix(in srgb, var(--error) 8%, transparent);
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* ========================================
+           EMPTY STATE TOGGLE (demo)
+           ======================================== */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            padding: 10px 14px;
+            background: var(--surface-2);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .toggle-label {
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch.active {
+            background: var(--accent);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: var(--surface);
+            border-radius: 50%;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(16px);
+        }
+
+        /* ========================================
+           DATE GROUP
+           ======================================== */
+        .date-group {
+            margin-bottom: 24px;
+        }
+
+        .date-group-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding-top: 4px;
+        }
+
+        .date-group-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .date-group-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ========================================
+           HISTORY ENTRY
+           ======================================== */
+        .history-entry {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s, opacity 0.35s, max-height 0.35s, padding 0.35s, margin 0.35s, border-width 0.35s;
+            max-height: 120px;
+            overflow: hidden;
+        }
+
+        .history-entry:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+
+        .history-entry.removing {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+            pointer-events: none;
+        }
+
+        .history-entry.finished .entry-title {
+            color: var(--text-muted);
+        }
+
+        .entry-left {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .entry-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .entry-meta {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .entry-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .meta-favicon {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .meta-dot {
+            margin: 0 8px;
+            opacity: 0.4;
+        }
+
+        .meta-finished {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .meta-finished svg {
+            color: #51CF66;
+            flex-shrink: 0;
+        }
+
+        .meta-not-started {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .entry-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Saved star */
+        .entry-star {
+            color: var(--save-color);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Progress ring */
+        .progress-ring {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 2.5;
+        }
+
+        .progress-ring-fill {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.4s ease;
+        }
+
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.45rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-ring.complete .progress-ring-fill {
+            stroke: #51CF66;
+        }
+
+        /* Delete button */
+        .entry-delete {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            opacity: 0;
+        }
+
+        .history-entry:hover .entry-delete {
+            opacity: 1;
+        }
+
+        .entry-delete:hover {
+            color: var(--error);
+            background: color-mix(in srgb, var(--error) 8%, transparent);
+        }
+
+        /* ========================================
+           CLEAR ALL CONFIRMATION
+           ======================================== */
+        .clear-confirm {
+            display: none;
+            text-align: center;
+            padding: 48px 20px;
+        }
+
+        .clear-confirm.visible {
+            display: block;
+        }
+
+        .clear-confirm-title {
+            font-family: var(--font-reading);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .clear-confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-ghost {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--text-muted);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            border: 1px solid var(--error);
+            color: #FFFFFF;
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        /* ========================================
+           EMPTY STATE
+           ======================================== */
+        .empty-state {
+            display: none;
+            text-align: center;
+            max-width: 360px;
+            margin: 0 auto;
+            padding: 64px 20px;
+        }
+
+        .empty-state.visible {
+            display: block;
+        }
+
+        .empty-state-icon {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            opacity: 0.4;
+        }
+
+        .empty-state-title {
+            font-family: var(--font-reading);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* ========================================
+           TOAST
+           ======================================== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 300;
+            white-space: nowrap;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .toast-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .toast-dot.error { background: var(--error); }
+        .toast-dot.success { background: #51CF66; }
+        .toast-dot.info { background: var(--save-color); }
+
+        .toast-undo {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            padding: 0;
+            margin-left: 4px;
+        }
+
+        .toast-undo:hover {
+            color: var(--accent-hover);
+        }
+
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 640px) {
+            .page-container {
+                padding: 24px 16px 48px;
+            }
+
+            .nav-link {
+                font-size: 0.75rem;
+                padding: 6px 8px;
+            }
+
+            .header { padding: 0 12px; }
+
+            .header-right { gap: 6px; }
+
+            .history-entry {
+                padding: 14px 16px;
+                gap: 12px;
+            }
+
+            .entry-meta {
+                font-size: 0.7rem;
+            }
+
+            .meta-dot {
+                margin: 0 5px;
+            }
+
+            .entry-delete {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .nav-divider {
+                display: none;
+            }
+
+            .entry-right {
+                gap: 8px;
+            }
+
+            .page-header-top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .clear-all-btn {
+                padding-left: 0;
+            }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo">Reader</div>
+        <div class="header-right">
+            <nav class="header-nav">
+                <button class="nav-link">Library</button>
+                <button class="nav-link active">History</button>
+            </nav>
+            <div class="nav-divider"></div>
+            <div class="user-avatar" title="John Doe">JD</div>
+            <div class="nav-divider"></div>
+            <div class="theme-dots">
+                <div class="theme-dot t-light active" data-theme="" title="Light"></div>
+                <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
+                <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-area">
+        <div class="page-container">
+
+            <!-- PAGE HEADER -->
+            <div class="page-header">
+                <div class="page-header-top">
+                    <h1 class="page-title">Reading History</h1>
+                    <button class="clear-all-btn" id="clearAllBtn">Clear all history</button>
+                </div>
+                <p class="page-subtitle">Your recently opened articles</p>
+            </div>
+
+            <!-- EMPTY STATE TOGGLE (demo control) -->
+            <div class="toggle-row">
+                <span class="toggle-label">Preview empty state</span>
+                <div class="toggle-switch" id="emptyToggle"></div>
+            </div>
+
+            <!-- CLEAR ALL CONFIRMATION (hidden by default) -->
+            <div class="clear-confirm" id="clearConfirm">
+                <p class="clear-confirm-title">Clear all reading history?</p>
+                <div class="clear-confirm-actions">
+                    <button class="btn-ghost" id="clearCancel">Cancel</button>
+                    <button class="btn-danger" id="clearConfirmBtn">Clear all</button>
+                </div>
+            </div>
+
+            <!-- HISTORY LIST -->
+            <div id="historyList">
+
+                <!-- TODAY -->
+                <div class="date-group" data-group="today">
+                    <div class="date-group-header">
+                        <span class="date-group-label">Today</span>
+                        <div class="date-group-line"></div>
+                    </div>
+
+                    <!-- Entry 1 -->
+                    <div class="history-entry" data-id="1">
+                        <div class="entry-left">
+                            <div class="entry-title">The Art of Readable Code</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=medium.com&sz=32" alt="">
+                                    medium.com
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 4 of 12</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">3 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring" title="33%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="37.888"/>
+                                </svg>
+                                <span class="progress-ring-text">33</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="1">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 2 -->
+                    <div class="history-entry" data-id="2">
+                        <div class="entry-left">
+                            <div class="entry-title">Why Functional Programming Matters</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=github.blog&sz=32" alt="">
+                                    github.blog
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 9 of 12</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">5 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring" title="75%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="14.137"/>
+                                </svg>
+                                <span class="progress-ring-text">75</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="2">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 3 -->
+                    <div class="history-entry" data-id="3">
+                        <div class="entry-left">
+                            <div class="entry-title">Breaking: New CSS Features in 2026</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=web.dev&sz=32" alt="">
+                                    web.dev
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 1 of 6</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">6 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <div class="progress-ring" title="8%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="52.025"/>
+                                </svg>
+                                <span class="progress-ring-text">8</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="3">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YESTERDAY -->
+                <div class="date-group" data-group="yesterday">
+                    <div class="date-group-header">
+                        <span class="date-group-label">Yesterday</span>
+                        <div class="date-group-line"></div>
+                    </div>
+
+                    <!-- Entry 4 -->
+                    <div class="history-entry" data-id="4">
+                        <div class="entry-left">
+                            <div class="entry-title">The Library at the End of the World</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=newyorker.com&sz=32" alt="">
+                                    newyorker.com
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 2 of 14</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Yesterday</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring" title="15%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="48.067"/>
+                                </svg>
+                                <span class="progress-ring-text">15</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="4">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 5 — Finished -->
+                    <div class="history-entry finished" data-id="5">
+                        <div class="entry-left">
+                            <div class="entry-title">How to Build a Reading App</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=dev.to&sz=32" alt="">
+                                    dev.to
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item meta-finished">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Finished
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Yesterday</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <div class="progress-ring complete" title="100%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="0"/>
+                                </svg>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#51CF66" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FEBRUARY 7, 2026 -->
+                <div class="date-group" data-group="feb7">
+                    <div class="date-group-header">
+                        <span class="date-group-label">February 7, 2026</span>
+                        <div class="date-group-line"></div>
+                    </div>
+
+                    <!-- Entry 6 — Finished -->
+                    <div class="history-entry finished" data-id="6">
+                        <div class="entry-left">
+                            <div class="entry-title">Understanding CSS Grid Layout</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=css-tricks.com&sz=32" alt="">
+                                    css-tricks.com
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item meta-finished">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Finished
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">2 days ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring complete" title="100%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="0"/>
+                                </svg>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#51CF66" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="6">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 7 -->
+                    <div class="history-entry" data-id="7">
+                        <div class="entry-left">
+                            <div class="entry-title">The Psychology of Color in Design</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=uxdesign.cc&sz=32" alt="">
+                                    uxdesign.cc
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 3 of 8</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">2 days ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <div class="progress-ring" title="37%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="35.626"/>
+                                </svg>
+                                <span class="progress-ring-text">37</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="7">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LAST WEEK -->
+                <div class="date-group" data-group="lastweek">
+                    <div class="date-group-header">
+                        <span class="date-group-label">Last week</span>
+                        <div class="date-group-line"></div>
+                    </div>
+
+                    <!-- Entry 8 — Not started -->
+                    <div class="history-entry" data-id="8">
+                        <div class="entry-left">
+                            <div class="entry-title">A Brief History of Typography</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=aeon.co&sz=32" alt="">
+                                    aeon.co
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item meta-not-started">Not started</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">5 days ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring" title="0%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="56.549"/>
+                                </svg>
+                                <span class="progress-ring-text">0</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="8">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 9 -->
+                    <div class="history-entry" data-id="9">
+                        <div class="entry-left">
+                            <div class="entry-title">The Future of Web Development</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=smashingmagazine.com&sz=32" alt="">
+                                    smashingmagazine.com
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 5 of 10</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">6 days ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <span class="entry-star" title="Saved to library">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </span>
+                            <div class="progress-ring" title="50%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="28.274"/>
+                                </svg>
+                                <span class="progress-ring-text">50</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="9">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Entry 10 -->
+                    <div class="history-entry" data-id="10">
+                        <div class="entry-left">
+                            <div class="entry-title">Building Accessible Web Apps</div>
+                            <div class="entry-meta">
+                                <span class="entry-meta-item">
+                                    <img class="meta-favicon" src="https://www.google.com/s2/favicons?domain=a11yproject.com&sz=32" alt="">
+                                    a11yproject.com
+                                </span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">Page 7 of 9</span>
+                                <span class="meta-dot">&middot;</span>
+                                <span class="entry-meta-item">1 week ago</span>
+                            </div>
+                        </div>
+                        <div class="entry-right">
+                            <div class="progress-ring" title="78%">
+                                <svg width="24" height="24" viewBox="0 0 24 24">
+                                    <circle class="progress-ring-bg" cx="12" cy="12" r="9"/>
+                                    <circle class="progress-ring-fill" cx="12" cy="12" r="9"
+                                        stroke-dasharray="56.549"
+                                        stroke-dashoffset="12.441"/>
+                                </svg>
+                                <span class="progress-ring-text">78</span>
+                            </div>
+                            <button class="entry-delete" title="Remove from history" data-id="10">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /historyList -->
+
+            <!-- EMPTY STATE -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
+                <h2 class="empty-state-title">No reading history</h2>
+                <p class="empty-state-subtitle">Articles you open will appear here automatically</p>
+            </div>
+
+        </div><!-- /page-container -->
+    </div><!-- /main-area -->
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <div class="toast-dot" id="toastDot"></div>
+        <span id="toastMsg"></span>
+        <button class="toast-undo" id="toastUndo" style="display:none;">Undo</button>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ==========================================
+        // THEME
+        // ==========================================
+        const savedTheme = localStorage.getItem('reader-v2-theme') || '';
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.querySelectorAll('.theme-dot').forEach(function(dot) {
+            if (dot.dataset.theme === savedTheme) {
+                document.querySelectorAll('.theme-dot').forEach(function(d) { d.classList.remove('active'); });
+                dot.classList.add('active');
+            }
+            dot.addEventListener('click', function() {
+                document.querySelectorAll('.theme-dot').forEach(function(d) { d.classList.remove('active'); });
+                dot.classList.add('active');
+                document.documentElement.setAttribute('data-theme', dot.dataset.theme);
+                localStorage.setItem('reader-v2-theme', dot.dataset.theme);
+            });
+        });
+
+        // ==========================================
+        // TOAST
+        // ==========================================
+        var toastTimer = null;
+
+        function showToast(msg, type, showUndo) {
+            type = type || 'info';
+            document.getElementById('toastMsg').textContent = msg;
+            var dot = document.getElementById('toastDot');
+            dot.className = 'toast-dot ' + type;
+            var undoBtn = document.getElementById('toastUndo');
+            undoBtn.style.display = showUndo ? '' : 'none';
+            var t = document.getElementById('toast');
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function() {
+                t.classList.remove('show');
+                // Clear undo data after toast hides
+                setTimeout(function() {
+                    removedEntry = null;
+                    removedEntryHTML = null;
+                }, 400);
+            }, 5000);
+        }
+
+        // ==========================================
+        // EMPTY STATE TOGGLE
+        // ==========================================
+        var emptyToggle = document.getElementById('emptyToggle');
+        var historyList = document.getElementById('historyList');
+        var emptyState = document.getElementById('emptyState');
+        var clearAllBtn = document.getElementById('clearAllBtn');
+        var clearConfirm = document.getElementById('clearConfirm');
+        var isEmptyPreview = false;
+
+        function setEmptyView(empty) {
+            isEmptyPreview = empty;
+            if (empty) {
+                historyList.classList.add('hidden');
+                clearConfirm.classList.remove('visible');
+                emptyState.classList.add('visible');
+                clearAllBtn.style.display = 'none';
+                emptyToggle.classList.add('active');
+            } else {
+                historyList.classList.remove('hidden');
+                emptyState.classList.remove('visible');
+                clearAllBtn.style.display = '';
+                emptyToggle.classList.remove('active');
+            }
+        }
+
+        emptyToggle.addEventListener('click', function() {
+            setEmptyView(!isEmptyPreview);
+        });
+
+        // ==========================================
+        // DELETE ENTRY + UNDO
+        // ==========================================
+        var removedEntry = null;
+        var removedEntryHTML = null;
+        var removedEntryParent = null;
+        var removedEntryNext = null;
+        var removedEntryGroup = null;
+        var removedGroupHTML = null;
+
+        function bindEntryDelete(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var entry = btn.closest('.history-entry');
+                var group = entry.closest('.date-group');
+
+                // Store for undo
+                removedEntry = entry;
+                removedEntryParent = entry.parentNode;
+                removedEntryNext = entry.nextElementSibling;
+                removedEntryHTML = entry.outerHTML;
+                removedEntryGroup = group;
+                removedGroupHTML = null;
+
+                entry.classList.add('removing');
+
+                // After animation, remove DOM node
+                setTimeout(function() {
+                    if (entry.parentNode) entry.remove();
+
+                    // If group is now empty, store group HTML for undo then remove
+                    if (group && group.querySelectorAll('.history-entry').length === 0) {
+                        removedGroupHTML = group.outerHTML;
+                        removedEntryParent = group.parentNode;
+                        removedEntryNext = group.nextElementSibling;
+                        group.remove();
+                    }
+
+                    // If all groups gone, show empty
+                    if (historyList.querySelectorAll('.history-entry').length === 0) {
+                        setEmptyView(true);
+                    }
+                }, 360);
+
+                showToast('Entry removed from history', 'info', true);
+            });
+        }
+
+        document.querySelectorAll('.entry-delete').forEach(bindEntryDelete);
+
+        // Undo handler
+        document.getElementById('toastUndo').addEventListener('click', function() {
+            if (!removedEntryHTML || !removedEntryParent) return;
+
+            // If an entire group was removed, restore it
+            if (removedGroupHTML) {
+                var tempG = document.createElement('div');
+                tempG.innerHTML = removedGroupHTML;
+                var restoredGroup = tempG.firstElementChild;
+
+                if (removedEntryNext && removedEntryNext.parentNode === removedEntryParent) {
+                    removedEntryParent.insertBefore(restoredGroup, removedEntryNext);
+                } else {
+                    removedEntryParent.appendChild(restoredGroup);
+                }
+
+                // Re-bind events on restored entries
+                restoredGroup.querySelectorAll('.entry-delete').forEach(bindEntryDelete);
+                restoredGroup.querySelectorAll('.history-entry').forEach(bindEntryClick);
+            } else {
+                // Restore just the entry
+                var temp = document.createElement('div');
+                temp.innerHTML = removedEntryHTML;
+                var restoredEntry = temp.firstElementChild;
+                restoredEntry.classList.remove('removing');
+
+                if (removedEntryNext && removedEntryNext.parentNode === removedEntryParent) {
+                    removedEntryParent.insertBefore(restoredEntry, removedEntryNext);
+                } else {
+                    removedEntryParent.appendChild(restoredEntry);
+                }
+
+                // Re-bind events
+                var delBtn = restoredEntry.querySelector('.entry-delete');
+                if (delBtn) bindEntryDelete(delBtn);
+                bindEntryClick(restoredEntry);
+            }
+
+            // Ensure empty state is hidden
+            setEmptyView(false);
+
+            // Hide toast
+            clearTimeout(toastTimer);
+            document.getElementById('toast').classList.remove('show');
+            removedEntry = null;
+            removedEntryHTML = null;
+
+            // Brief success
+            setTimeout(function() {
+                showToast('Entry restored', 'success', false);
+            }, 400);
+        });
+
+        // ==========================================
+        // CLEAR ALL HISTORY
+        // ==========================================
+        clearAllBtn.addEventListener('click', function() {
+            historyList.classList.add('hidden');
+            clearConfirm.classList.add('visible');
+        });
+
+        document.getElementById('clearCancel').addEventListener('click', function() {
+            clearConfirm.classList.remove('visible');
+            historyList.classList.remove('hidden');
+        });
+
+        document.getElementById('clearConfirmBtn').addEventListener('click', function() {
+            clearConfirm.classList.remove('visible');
+
+            // Fade out all entries then show empty state
+            var entries = historyList.querySelectorAll('.history-entry');
+            var delay = 0;
+            entries.forEach(function(entry) {
+                setTimeout(function() {
+                    entry.classList.add('removing');
+                }, delay);
+                delay += 50;
+            });
+
+            setTimeout(function() {
+                historyList.innerHTML = '';
+                setEmptyView(true);
+                showToast('History cleared', 'info', false);
+            }, delay + 380);
+        });
+
+        // ==========================================
+        // ENTRY CLICK (row is clickable)
+        // ==========================================
+        function bindEntryClick(entry) {
+            entry.addEventListener('click', function() {
+                var title = entry.querySelector('.entry-title').textContent;
+                showToast('Opening "' + title + '"...', 'info', false);
+            });
+        }
+
+        document.querySelectorAll('.history-entry').forEach(bindEntryClick);
+
+    })();
+    </script>
+
+</body>
+</html>

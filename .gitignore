@@ -1,0 +1,34 @@
+# Virtual environment
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+dist/
+app/static/dist/
+
+# Environment variables
+.env
+
+# Generated output files
+output.html
+text.docx
+text.html
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Alembic
+migrations/versions/__pycache__/

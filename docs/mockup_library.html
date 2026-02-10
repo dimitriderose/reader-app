@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader — Library</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ========================================
+           THEME SYSTEM (Light / Sepia / Dark)
+           ======================================== */
+        :root {
+            --bg: #FAFAF7;
+            --bg-outer: #EEEEE8;
+            --surface: #FFFFFF;
+            --surface-2: #F0EFEB;
+            --text: #1A1A1A;
+            --text-muted: #7A7A72;
+            --border: #E5E5E0;
+            --accent: #3D3D3D;
+            --accent-hover: #111111;
+            --error: #DC3545;
+            --error-bg: #FEF2F2;
+            --save-color: #D4A843;
+            --radius: 12px;
+            --font-reading: 'Source Serif 4', Georgia, serif;
+            --font-ui: 'Inter', -apple-system, sans-serif;
+            --header-h: 52px;
+        }
+
+        [data-theme="sepia"] {
+            --bg: #F2E8D5;
+            --bg-outer: #E5D9C3;
+            --surface: #FAF4E6;
+            --surface-2: #EDE3CF;
+            --text: #3D3226;
+            --text-muted: #8A7E6C;
+            --border: #DDD0B8;
+            --accent: #5C4A32;
+            --accent-hover: #3D3226;
+            --save-color: #B8860B;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1A1A1A;
+            --bg-outer: #111111;
+            --surface: #222222;
+            --surface-2: #2A2A2A;
+            --text: #E0DDD5;
+            --text-muted: #8A8A82;
+            --border: #333330;
+            --accent: #D5D0C4;
+            --accent-hover: #FFFFFF;
+            --error: #FF6B6B;
+            --error-bg: #2D1515;
+            --save-color: #E8BD5A;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.4s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========================================
+           HEADER
+           ======================================== */
+        .header {
+            height: var(--header-h);
+            min-height: var(--header-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--font-reading);
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-link {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            background: var(--surface-2);
+        }
+
+        .nav-link.active {
+            color: var(--text);
+            font-weight: 600;
+            background: var(--surface-2);
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .user-avatar:hover {
+            border-color: var(--text-muted);
+        }
+
+        /* Theme dots */
+        .theme-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .theme-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .theme-dot:hover { transform: scale(1.15); }
+
+        .theme-dot.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .theme-dot.t-light { background: #FAFAF7; }
+        .theme-dot.t-sepia { background: #F2E8D5; }
+        .theme-dot.t-dark { background: #1A1A1A; }
+
+        /* ========================================
+           PAGE LAYOUT
+           ======================================== */
+        .page-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ========================================
+           SIDEBAR
+           ======================================== */
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: background 0.4s;
+        }
+
+        .sidebar-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 0 14px;
+            margin-bottom: 8px;
+        }
+
+        .collection-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .collection-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 450;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text);
+            gap: 8px;
+        }
+
+        .collection-item:hover {
+            background: var(--surface-2);
+        }
+
+        .collection-item.active {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .collection-item.active .collection-count {
+            color: var(--bg);
+            opacity: 0.7;
+        }
+
+        .collection-item.active .collection-dot {
+            border-color: var(--bg);
+        }
+
+        .collection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .collection-dot.blue { background: #4A90D9; }
+        .collection-dot.green { background: #51CF66; }
+        .collection-dot.orange { background: #F59F00; }
+
+        .collection-label {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .collection-count {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        .new-collection-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1.5px dashed var(--border);
+            background: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 8px;
+        }
+
+        .new-collection-btn:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 12px 14px;
+        }
+
+        .manage-link {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding: 4px 14px;
+            cursor: pointer;
+            transition: color 0.15s;
+            text-decoration: none;
+        }
+
+        .manage-link:hover {
+            color: var(--text);
+        }
+
+        /* ========================================
+           MAIN CONTENT
+           ======================================== */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 32px;
+        }
+
+        .content-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            gap: 16px;
+        }
+
+        .content-title {
+            font-family: var(--font-reading);
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .content-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+
+        /* Sort dropdown */
+        .sort-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .sort-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 8px 32px 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .sort-select:hover,
+        .sort-select:focus {
+            border-color: var(--text-muted);
+        }
+
+        .sort-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* Empty state toggle */
+        .empty-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-left: 8px;
+        }
+
+        .empty-toggle:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        /* ========================================
+           ARTICLE CARDS GRID
+           ======================================== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .article-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s, opacity 0.35s ease, max-height 0.4s ease, margin 0.4s ease, padding 0.4s ease, border-width 0.4s ease;
+            cursor: default;
+        }
+
+        .article-card:hover {
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .article-card.completed-card {
+            opacity: 0.7;
+        }
+
+        .article-card.completed-card:hover {
+            opacity: 1;
+        }
+
+        .article-card.removing {
+            opacity: 0;
+            max-height: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border-width: 0 !important;
+            overflow: hidden;
+        }
+
+        .card-top {
+            padding: 20px 20px 16px;
+        }
+
+        .card-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+
+        .card-source {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-width: 0;
+        }
+
+        .card-favicon {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .card-domain {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-badge {
+            font-size: 0.65rem;
+            font-weight: 500;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.35;
+            color: var(--text);
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-reading-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .card-progress {
+            padding: 0 20px 16px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .completed-card .progress-fill {
+            background: #51CF66;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .card-bottom {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface-2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-time-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .card-time-stack .time-secondary {
+            opacity: 0.65;
+        }
+
+        .completed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #51CF66;
+        }
+
+        .completed-badge svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.15s;
+            font-size: 1.1rem;
+            line-height: 1;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .menu-btn:hover {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        /* ========================================
+           THREE-DOT MENU DROPDOWN
+           ======================================== */
+        .card-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 4px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            min-width: 180px;
+            z-index: 200;
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
+            transition: opacity 0.15s, transform 0.15s;
+            overflow: hidden;
+        }
+
+        .card-menu.open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .card-menu-item {
+            display: block;
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 10px 14px;
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .card-menu-item:hover {
+            background: var(--surface-2);
+        }
+
+        .card-menu-item.danger {
+            color: var(--error);
+        }
+
+        .card-menu-item.danger:hover {
+            background: var(--error-bg);
+        }
+
+        /* ========================================
+           EMPTY STATE
+           ======================================== */
+        .empty-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-state.visible {
+            display: flex;
+        }
+
+        .empty-icon {
+            margin-bottom: 24px;
+            color: var(--text-muted);
+            opacity: 0.35;
+        }
+
+        .empty-icon svg {
+            width: 80px;
+            height: 80px;
+        }
+
+        .empty-title {
+            font-family: var(--font-reading);
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .empty-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 28px;
+        }
+
+        .action-btn {
+            padding: 12px 28px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font-ui);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        /* ========================================
+           TOAST
+           ======================================== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 300;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .toast-dot.error { background: var(--error); }
+        .toast-dot.success { background: #51CF66; }
+        .toast-dot.info { background: var(--save-color); }
+
+        .toast-undo {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 2px;
+            background: none;
+            border: none;
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            padding: 0;
+            margin-left: 4px;
+        }
+
+        .toast-undo:hover {
+            color: var(--accent-hover);
+        }
+
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                min-width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 12px;
+                flex-direction: row;
+                align-items: center;
+                overflow-x: auto;
+                overflow-y: hidden;
+                gap: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .sidebar-title {
+                display: none;
+            }
+
+            .collection-list {
+                flex-direction: row;
+                gap: 4px;
+                flex-wrap: nowrap;
+            }
+
+            .collection-item {
+                white-space: nowrap;
+                padding: 6px 14px;
+                font-size: 0.8rem;
+                border-radius: 999px;
+                border: 1px solid var(--border);
+                flex-shrink: 0;
+            }
+
+            .collection-item.active {
+                border-color: var(--accent);
+            }
+
+            .collection-item:hover {
+                background: var(--surface-2);
+            }
+
+            .new-collection-btn {
+                flex-shrink: 0;
+                margin-top: 0;
+                border-radius: 999px;
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+
+            .sidebar-divider,
+            .manage-link {
+                display: none;
+            }
+
+            .page-body {
+                flex-direction: column;
+            }
+
+            .main-content {
+                padding: 20px 16px;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .sort-wrapper {
+                align-self: flex-start;
+            }
+
+            .header-nav .nav-link {
+                font-size: 0.75rem;
+                padding: 5px 8px;
+            }
+
+            .nav-divider {
+                display: none;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .header { padding: 0 12px; }
+
+            .header-right {
+                gap: 8px;
+            }
+
+            .user-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 0.6rem;
+            }
+
+            .theme-dots {
+                gap: 4px;
+            }
+
+            .theme-dot {
+                width: 18px;
+                height: 18px;
+            }
+        }
+
+        /* Scrollbar styling */
+        .main-content::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .main-content::-webkit-scrollbar-track,
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .main-content::-webkit-scrollbar-thumb,
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover,
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Click-outside overlay for menus */
+        .menu-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 150;
+            display: none;
+        }
+
+        .menu-overlay.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo">Reader</div>
+        <div class="header-right">
+            <nav class="header-nav">
+                <button class="nav-link active">Library</button>
+                <button class="nav-link">History</button>
+            </nav>
+            <div class="nav-divider"></div>
+            <div class="user-avatar" title="John Doe">JD</div>
+            <div class="nav-divider"></div>
+            <div class="theme-dots">
+                <div class="theme-dot t-light active" data-theme="" title="Light"></div>
+                <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
+                <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PAGE BODY -->
+    <div class="page-body">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-title">Collections</div>
+            <ul class="collection-list">
+                <li class="collection-item active" data-collection="all">
+                    <span class="collection-label">All Articles</span>
+                    <span class="collection-count">8</span>
+                </li>
+                <li class="collection-item" data-collection="uncategorized">
+                    <span class="collection-label">Uncategorized</span>
+                    <span class="collection-count">3</span>
+                </li>
+                <li class="collection-item" data-collection="tech">
+                    <span class="collection-dot blue"></span>
+                    <span class="collection-label">Tech</span>
+                    <span class="collection-count">2</span>
+                </li>
+                <li class="collection-item" data-collection="fiction">
+                    <span class="collection-dot green"></span>
+                    <span class="collection-label">Fiction</span>
+                    <span class="collection-count">2</span>
+                </li>
+                <li class="collection-item" data-collection="readlater">
+                    <span class="collection-dot orange"></span>
+                    <span class="collection-label">Read Later</span>
+                    <span class="collection-count">1</span>
+                </li>
+            </ul>
+            <button class="new-collection-btn">+ New Collection</button>
+            <div class="sidebar-divider"></div>
+            <a class="manage-link" href="#">Manage Collections</a>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            <div class="content-header">
+                <div>
+                    <h1 class="content-title">Your Library</h1>
+                    <p class="content-subtitle" id="articleCount">8 articles saved</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="sort-wrapper">
+                        <select class="sort-select" id="sortSelect">
+                            <option value="lastread" selected>Sort by: Last read</option>
+                            <option value="saved">Sort by: Date saved</option>
+                            <option value="progress">Sort by: Progress</option>
+                        </select>
+                    </div>
+                    <button class="empty-toggle" id="emptyToggle" title="Toggle empty library state">Show empty</button>
+                </div>
+            </div>
+
+            <!-- CARDS GRID -->
+            <div class="cards-grid" id="cardsGrid">
+
+                <!-- Card 1 -->
+                <div class="article-card" data-card-id="1" data-collection="tech">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=medium.com&sz=32" alt="">
+                                <span class="card-domain">medium.com</span>
+                            </div>
+                            <span class="card-badge">Tech</span>
+                        </div>
+                        <div class="card-title">The Art of Readable Code</div>
+                        <div class="card-reading-time">8 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 33%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Page 4 of 12</span>
+                            <span>33%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span>Read 3 hours ago</span>
+                            <span class="time-secondary">Saved 2 days ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="article-card" data-card-id="2" data-collection="tech">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=github.blog&sz=32" alt="">
+                                <span class="card-domain">github.blog</span>
+                            </div>
+                            <span class="card-badge">Tech</span>
+                        </div>
+                        <div class="card-title">Why Functional Programming Matters</div>
+                        <div class="card-reading-time">12 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Page 9 of 12</span>
+                            <span>75%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span>Read yesterday</span>
+                            <span class="time-secondary">Saved 3 days ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="article-card" data-card-id="3" data-collection="fiction">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=newyorker.com&sz=32" alt="">
+                                <span class="card-domain">newyorker.com</span>
+                            </div>
+                            <span class="card-badge">Fiction</span>
+                        </div>
+                        <div class="card-title">The Library at the End of the World</div>
+                        <div class="card-reading-time">18 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 15%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Page 2 of 14</span>
+                            <span>15%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span>Read 2 days ago</span>
+                            <span class="time-secondary">Saved 4 days ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 4 (completed) -->
+                <div class="article-card completed-card" data-card-id="4" data-collection="uncategorized">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=css-tricks.com&sz=32" alt="">
+                                <span class="card-domain">css-tricks.com</span>
+                            </div>
+                            <span class="card-badge">Uncategorized</span>
+                        </div>
+                        <div class="card-title">Understanding CSS Grid Layout</div>
+                        <div class="card-reading-time">6 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 100%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Page 8 of 8</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span class="card-time">
+                                <span class="completed-badge">
+                                    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+                                    Finished
+                                </span>
+                            </span>
+                            <span class="time-secondary">Saved 1 week ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 5 (not started) -->
+                <div class="article-card" data-card-id="5" data-collection="readlater">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=aeon.co&sz=32" alt="">
+                                <span class="card-domain">aeon.co</span>
+                            </div>
+                            <span class="card-badge">Read Later</span>
+                        </div>
+                        <div class="card-title">A Brief History of Typography</div>
+                        <div class="card-reading-time">14 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Not started</span>
+                            <span>0%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span>Not yet read</span>
+                            <span class="time-secondary">Saved 1 week ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 6 -->
+                <div class="article-card" data-card-id="6" data-collection="fiction">
+                    <div class="card-top">
+                        <div class="card-meta-row">
+                            <div class="card-source">
+                                <img class="card-favicon" src="https://www.google.com/s2/favicons?domain=smashingmagazine.com&sz=32" alt="">
+                                <span class="card-domain">smashingmagazine.com</span>
+                            </div>
+                            <span class="card-badge">Fiction</span>
+                        </div>
+                        <div class="card-title">The Future of Web Development</div>
+                        <div class="card-reading-time">10 min read</div>
+                    </div>
+                    <div class="card-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 50%"></div>
+                        </div>
+                        <div class="progress-info">
+                            <span>Page 5 of 10</span>
+                            <span>50%</span>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-time-stack">
+                            <span>Read 5 hours ago</span>
+                            <span class="time-secondary">Saved 5 days ago</span>
+                        </div>
+                        <button class="menu-btn" aria-label="Card menu">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <circle cx="8" cy="3" r="1.5"/>
+                                <circle cx="8" cy="8" r="1.5"/>
+                                <circle cx="8" cy="13" r="1.5"/>
+                            </svg>
+                            <div class="card-menu">
+                                <button class="card-menu-item move-btn">Move to...</button>
+                                <button class="card-menu-item danger remove-btn">Remove from library</button>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 62V18a4 4 0 014-4h20l4 6h24a4 4 0 014 4v38a4 4 0 01-4 4H16a4 4 0 01-4-4z" opacity="0.3"/>
+                        <path d="M20 28h16M20 36h24M20 44h20"/>
+                        <path d="M40 54c-8 0-14-6-14-14s6-14 14-14 14 6 14 14-6 14-14 14z" opacity="0.15" fill="currentColor" stroke="none"/>
+                        <!-- Open book SVG -->
+                        <path d="M10 56V22c0-2 1-4 3-4h14c3 0 6 1 8 3v38c-2-2-5-3-8-3H13c-2 0-3-2-3-4z"/>
+                        <path d="M70 56V22c0-2-1-4-3-4H53c-3 0-6 1-8 3v38c2-2 5-3 8-3h14c2 0 3-2 3-4z"/>
+                        <path d="M35 21v38"/>
+                        <path d="M45 21v38"/>
+                        <path d="M18 30h10M18 36h10M18 42h8"/>
+                        <path d="M52 30h10M52 36h10M52 42h8"/>
+                    </svg>
+                </div>
+                <h2 class="empty-title">Your library is empty</h2>
+                <p class="empty-subtitle">Articles you save will appear here</p>
+                <button class="action-btn">Start reading</button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- CLICK OVERLAY (closes menus) -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <div class="toast-dot info" id="toastDot"></div>
+        <span id="toastMsg">Article removed</span>
+        <button class="toast-undo" id="toastUndo" style="display:none;">Undo</button>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ==========================================
+        // THEME
+        // ==========================================
+        const savedTheme = localStorage.getItem('reader-v2-theme') || '';
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.querySelectorAll('.theme-dot').forEach(function(dot) {
+            if (dot.dataset.theme === savedTheme) {
+                document.querySelectorAll('.theme-dot').forEach(function(d) { d.classList.remove('active'); });
+                dot.classList.add('active');
+            }
+            dot.addEventListener('click', function() {
+                document.querySelectorAll('.theme-dot').forEach(function(d) { d.classList.remove('active'); });
+                dot.classList.add('active');
+                document.documentElement.setAttribute('data-theme', dot.dataset.theme);
+                localStorage.setItem('reader-v2-theme', dot.dataset.theme);
+            });
+        });
+
+        // ==========================================
+        // COLLECTION SIDEBAR
+        // ==========================================
+        var collectionItems = document.querySelectorAll('.collection-item');
+        collectionItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                collectionItems.forEach(function(c) { c.classList.remove('active'); });
+                item.classList.add('active');
+                filterCards(item.dataset.collection);
+            });
+        });
+
+        function filterCards(collection) {
+            var cards = document.querySelectorAll('.article-card');
+            var visibleCount = 0;
+            cards.forEach(function(card) {
+                if (card.classList.contains('removing')) return;
+                if (collection === 'all') {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    if (card.dataset.collection === collection) {
+                        card.style.display = '';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+            updateArticleCount(visibleCount);
+        }
+
+        function updateArticleCount(count) {
+            var countEl = document.getElementById('articleCount');
+            if (count === undefined) {
+                var visible = document.querySelectorAll('.article-card:not([style*="display: none"]):not(.removing)');
+                count = visible.length;
+            }
+            countEl.textContent = count + ' article' + (count !== 1 ? 's' : '') + ' saved';
+        }
+
+        // ==========================================
+        // THREE-DOT MENUS
+        // ==========================================
+        var menuOverlay = document.getElementById('menuOverlay');
+        var openMenu = null;
+
+        document.querySelectorAll('.menu-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var menu = btn.querySelector('.card-menu');
+                if (openMenu && openMenu !== menu) {
+                    openMenu.classList.remove('open');
+                }
+                menu.classList.toggle('open');
+                if (menu.classList.contains('open')) {
+                    openMenu = menu;
+                    menuOverlay.classList.add('active');
+                } else {
+                    openMenu = null;
+                    menuOverlay.classList.remove('active');
+                }
+            });
+        });
+
+        menuOverlay.addEventListener('click', function() {
+            closeAllMenus();
+        });
+
+        function closeAllMenus() {
+            document.querySelectorAll('.card-menu.open').forEach(function(m) {
+                m.classList.remove('open');
+            });
+            openMenu = null;
+            menuOverlay.classList.remove('active');
+        }
+
+        // ==========================================
+        // REMOVE FROM LIBRARY + UNDO
+        // ==========================================
+        var removedCard = null;
+        var removedCardHTML = null;
+        var removedCardParent = null;
+        var removedCardNext = null;
+        var toastTimer = null;
+
+        document.querySelectorAll('.remove-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeAllMenus();
+
+                var card = btn.closest('.article-card');
+                if (!card) return;
+
+                // Store card info for undo
+                removedCard = card;
+                removedCardParent = card.parentNode;
+                removedCardNext = card.nextElementSibling;
+                removedCardHTML = card.outerHTML;
+
+                // Get natural height for animation
+                var cardHeight = card.offsetHeight;
+                card.style.maxHeight = cardHeight + 'px';
+
+                // Force reflow then animate out
+                void card.offsetHeight;
+                card.classList.add('removing');
+
+                // Remove from DOM after animation
+                setTimeout(function() {
+                    if (card.parentNode) {
+                        card.parentNode.removeChild(card);
+                    }
+                    updateArticleCount();
+                }, 450);
+
+                // Show toast
+                showToast('Article removed', 'info', true);
+            });
+        });
+
+        document.querySelectorAll('.move-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeAllMenus();
+                showToast('Move to collection (placeholder)', 'info', false);
+            });
+        });
+
+        function showToast(msg, type, showUndo) {
+            var toastEl = document.getElementById('toast');
+            var toastMsg = document.getElementById('toastMsg');
+            var toastDot = document.getElementById('toastDot');
+            var toastUndoBtn = document.getElementById('toastUndo');
+
+            // Clear previous timer
+            if (toastTimer) clearTimeout(toastTimer);
+
+            toastMsg.textContent = msg;
+            toastDot.className = 'toast-dot ' + (type || 'info');
+            toastUndoBtn.style.display = showUndo ? '' : 'none';
+
+            toastEl.classList.add('show');
+
+            toastTimer = setTimeout(function() {
+                toastEl.classList.remove('show');
+                // Clear undo data after toast hides
+                setTimeout(function() {
+                    removedCard = null;
+                    removedCardHTML = null;
+                }, 400);
+            }, 5000);
+        }
+
+        // Undo handler
+        document.getElementById('toastUndo').addEventListener('click', function() {
+            if (!removedCardHTML || !removedCardParent) return;
+
+            // Re-insert card
+            var temp = document.createElement('div');
+            temp.innerHTML = removedCardHTML;
+            var restoredCard = temp.firstElementChild;
+
+            // Remove any residual removing class / inline styles
+            restoredCard.classList.remove('removing');
+            restoredCard.style.maxHeight = '';
+            restoredCard.style.opacity = '';
+
+            if (removedCardNext && removedCardNext.parentNode === removedCardParent) {
+                removedCardParent.insertBefore(restoredCard, removedCardNext);
+            } else {
+                removedCardParent.appendChild(restoredCard);
+            }
+
+            // Re-bind event listeners on restored card
+            bindCardEvents(restoredCard);
+
+            // Update count
+            updateArticleCount();
+
+            // Hide toast
+            var toastEl = document.getElementById('toast');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastEl.classList.remove('show');
+
+            // Clear undo data
+            removedCard = null;
+            removedCardHTML = null;
+
+            // Brief success feedback
+            setTimeout(function() {
+                showToast('Article restored', 'success', false);
+            }, 400);
+        });
+
+        function bindCardEvents(card) {
+            // Menu button
+            var menuBtn = card.querySelector('.menu-btn');
+            if (menuBtn) {
+                menuBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var menu = menuBtn.querySelector('.card-menu');
+                    if (openMenu && openMenu !== menu) {
+                        openMenu.classList.remove('open');
+                    }
+                    menu.classList.toggle('open');
+                    if (menu.classList.contains('open')) {
+                        openMenu = menu;
+                        menuOverlay.classList.add('active');
+                    } else {
+                        openMenu = null;
+                        menuOverlay.classList.remove('active');
+                    }
+                });
+            }
+
+            // Remove button
+            var removeBtn = card.querySelector('.remove-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    closeAllMenus();
+
+                    removedCard = card;
+                    removedCardParent = card.parentNode;
+                    removedCardNext = card.nextElementSibling;
+                    removedCardHTML = card.outerHTML;
+
+                    var cardHeight = card.offsetHeight;
+                    card.style.maxHeight = cardHeight + 'px';
+                    void card.offsetHeight;
+                    card.classList.add('removing');
+
+                    setTimeout(function() {
+                        if (card.parentNode) {
+                            card.parentNode.removeChild(card);
+                        }
+                        updateArticleCount();
+                    }, 450);
+
+                    showToast('Article removed', 'info', true);
+                });
+            }
+
+            // Move button
+            var moveBtn = card.querySelector('.move-btn');
+            if (moveBtn) {
+                moveBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    closeAllMenus();
+                    showToast('Move to collection (placeholder)', 'info', false);
+                });
+            }
+        }
+
+        // ==========================================
+        // EMPTY STATE TOGGLE
+        // ==========================================
+        var isEmptyView = false;
+        var emptyToggle = document.getElementById('emptyToggle');
+        var emptyState = document.getElementById('emptyState');
+        var cardsGrid = document.getElementById('cardsGrid');
+
+        emptyToggle.addEventListener('click', function() {
+            isEmptyView = !isEmptyView;
+            if (isEmptyView) {
+                cardsGrid.style.display = 'none';
+                emptyState.classList.add('visible');
+                emptyToggle.textContent = 'Show cards';
+                document.getElementById('articleCount').textContent = '0 articles saved';
+            } else {
+                cardsGrid.style.display = '';
+                emptyState.classList.remove('visible');
+                emptyToggle.textContent = 'Show empty';
+                updateArticleCount();
+            }
+        });
+
+        // ==========================================
+        // SORT (demo)
+        // ==========================================
+        document.getElementById('sortSelect').addEventListener('change', function() {
+            // In a real app this would re-order cards.
+            // For the mockup, just show a toast.
+            var val = this.value;
+            var label = this.options[this.selectedIndex].text.replace('Sort by: ', '');
+            showToast('Sorted by ' + label, 'info', false);
+        });
+
+        // ==========================================
+        // NEW COLLECTION BUTTON (placeholder)
+        // ==========================================
+        document.querySelector('.new-collection-btn').addEventListener('click', function() {
+            showToast('New collection (placeholder)', 'info', false);
+        });
+
+    })();
+    </script>
+
+</body>
+</html>

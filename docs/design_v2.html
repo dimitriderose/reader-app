@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader — V2</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ========================================
+           THEME SYSTEM (Light / Sepia / Dark)
+           ======================================== */
+        :root {
+            --bg: #FAFAF7;
+            --bg-outer: #EEEEE8;
+            --surface: #FFFFFF;
+            --surface-2: #F0EFEB;
+            --text: #1A1A1A;
+            --text-muted: #7A7A72;
+            --border: #E5E5E0;
+            --accent: #3D3D3D;
+            --accent-hover: #111111;
+            --page-shadow: rgba(0, 0, 0, 0.08);
+            --page-fold: rgba(0, 0, 0, 0.12);
+            --error: #DC3545;
+            --error-bg: #FEF2F2;
+            --save-color: #D4A843;
+            --radius: 12px;
+            --font-reading: 'Source Serif 4', Georgia, serif;
+            --font-ui: 'Inter', -apple-system, sans-serif;
+            --header-h: 52px;
+            --toolbar-h: 46px;
+            --bottombar-h: 56px;
+        }
+
+        [data-theme="sepia"] {
+            --bg: #F2E8D5;
+            --bg-outer: #E5D9C3;
+            --surface: #FAF4E6;
+            --surface-2: #EDE3CF;
+            --text: #3D3226;
+            --text-muted: #8A7E6C;
+            --border: #DDD0B8;
+            --accent: #5C4A32;
+            --accent-hover: #3D3226;
+            --page-shadow: rgba(60, 40, 10, 0.1);
+            --page-fold: rgba(60, 40, 10, 0.15);
+            --save-color: #B8860B;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1A1A1A;
+            --bg-outer: #111111;
+            --surface: #222222;
+            --surface-2: #2A2A2A;
+            --text: #E0DDD5;
+            --text-muted: #8A8A82;
+            --border: #333330;
+            --accent: #D5D0C4;
+            --accent-hover: #FFFFFF;
+            --page-shadow: rgba(0, 0, 0, 0.5);
+            --page-fold: rgba(0, 0, 0, 0.6);
+            --error: #FF6B6B;
+            --error-bg: #2D1515;
+            --save-color: #E8BD5A;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.4s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========================================
+           HEADER
+           ======================================== */
+        .header {
+            height: var(--header-h);
+            min-height: var(--header-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: var(--font-reading);
+            font-size: 1.15rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .h-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .h-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+        /* Theme dots */
+        .theme-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .theme-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .theme-dot:hover { transform: scale(1.15); }
+
+        .theme-dot.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .theme-dot.t-light { background: #FAFAF7; }
+        .theme-dot.t-sepia { background: #F2E8D5; }
+        .theme-dot.t-dark { background: #1A1A1A; }
+
+        /* ========================================
+           MAIN AREA
+           ======================================== */
+        .main-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========================================
+           INPUT VIEW
+           ======================================== */
+        .input-view {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 56px 20px;
+            width: 100%;
+        }
+
+        .input-view .title {
+            font-family: var(--font-reading);
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .input-view .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+
+        /* Segmented control */
+        .segmented {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 28px;
+        }
+
+        .seg-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-ui);
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 9px 0;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .seg-btn:hover { color: var(--text); }
+
+        .seg-btn.active {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: 0 1px 4px var(--page-shadow);
+        }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Form */
+        .field { margin-bottom: 20px; }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .text-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .text-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+        textarea.text-input {
+            min-height: 180px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 44px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--surface);
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+        }
+
+        .drop-zone-icon { font-size: 1.8rem; margin-bottom: 10px; opacity: 0.35; }
+        .drop-zone-text { color: var(--text-muted); font-size: 0.85rem; }
+        .drop-zone-text strong { color: var(--text); }
+        .drop-zone.has-file { border-style: solid; border-color: var(--accent); }
+
+        /* Action button */
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: var(--radius);
+            font-family: var(--font-ui);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .action-btn:hover { background: var(--accent-hover); }
+
+        .action-btn.loading {
+            pointer-events: none;
+            color: transparent;
+        }
+
+        .action-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-top-color: white;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 300;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .toast-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .toast-dot.error { background: var(--error); }
+        .toast-dot.success { background: #51CF66; }
+        .toast-dot.info { background: var(--save-color); }
+
+        /* ========================================
+           READER VIEW
+           ======================================== */
+        .reader-view {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .reader-view.active { display: flex; }
+
+        /* Toolbar */
+        .reader-toolbar {
+            height: var(--toolbar-h);
+            min-height: var(--toolbar-h);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 0 16px;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .tb-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .tb-label { font-weight: 500; }
+
+        .tb-btn {
+            width: 30px;
+            height: 30px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .tb-btn:hover { border-color: var(--accent); }
+
+        .tb-val {
+            min-width: 28px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tb-toggle {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tb-toggle:hover { border-color: var(--accent); }
+
+        .tb-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+        }
+
+        /* Save / Bookmark button */
+        .save-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 5px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-ui);
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            border-color: var(--save-color);
+            color: var(--save-color);
+        }
+
+        .save-btn.saved {
+            background: var(--save-color);
+            border-color: var(--save-color);
+            color: #fff;
+        }
+
+        .save-icon {
+            font-size: 0.9rem;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+
+        .save-btn:hover .save-icon { transform: scale(1.15); }
+        .save-btn.saved .save-icon { transform: scale(1.1); }
+
+        /* ========================================
+           FLIPBOOK
+           ======================================== */
+        .flipbook {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-outer);
+        }
+
+        /* Centered page container — constrains line width */
+        .flipbook-page {
+            max-width: 860px;
+            height: 100%;
+            margin: 0 auto;
+            position: relative;
+            background: var(--bg);
+            box-shadow:
+                -1px 0 0 var(--border),
+                1px 0 0 var(--border),
+                0 4px 24px var(--page-shadow),
+                0 1px 6px var(--page-shadow);
+        }
+
+        .flipbook-viewport {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* CSS columns for pagination */
+        .flipbook-content {
+            /* height set dynamically by JS to be a multiple of line-height */
+            padding: 48px 56px;
+            padding-bottom: 48px; /* adjusted by JS */
+            column-fill: auto;
+            column-gap: 120px;
+            font-family: var(--font-reading);
+            font-size: var(--reader-fs, 20px);
+            line-height: 1.72;
+            color: var(--text);
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+            /* overflow is handled by .flipbook-viewport — NOT here,
+               or it clips all columns beyond the first */
+        }
+
+        .flipbook-content h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 0.4em;
+            letter-spacing: -0.02em;
+            break-after: avoid;
+            break-inside: avoid;
+        }
+
+        .flipbook-content .meta {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.85em;
+            margin-bottom: 1.8em;
+            padding-bottom: 1.5em;
+            border-bottom: 1px solid var(--border);
+            break-after: avoid;
+            break-inside: avoid;
+        }
+
+        .flipbook-content p {
+            margin-bottom: 1.1em;
+            orphans: 3;
+            widows: 3;
+        }
+
+        .flipbook-content blockquote {
+            border-left: 3px solid var(--border);
+            padding-left: 20px;
+            margin: 1.5em 0;
+            font-style: italic;
+            color: var(--text-muted);
+            break-inside: avoid;
+        }
+
+        /* Page fold shadow */
+        .page-shadow {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 10;
+        }
+
+        .page-shadow.flip-forward {
+            background: linear-gradient(to left,
+                rgba(0,0,0,0.07) 0%,
+                rgba(0,0,0,0.03) 5%,
+                transparent 35%
+            );
+            opacity: 1;
+            animation: shadowForward 0.5s ease-out forwards;
+        }
+
+        .page-shadow.flip-backward {
+            background: linear-gradient(to right,
+                rgba(0,0,0,0.07) 0%,
+                rgba(0,0,0,0.03) 5%,
+                transparent 35%
+            );
+            opacity: 1;
+            animation: shadowBackward 0.5s ease-out forwards;
+        }
+
+        @keyframes shadowForward {
+            0% { opacity: 0; transform: translateX(30%); }
+            25% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(-100%); }
+        }
+
+        @keyframes shadowBackward {
+            0% { opacity: 0; transform: translateX(-30%); }
+            25% { opacity: 1; }
+            100% { opacity: 0; transform: translateX(100%); }
+        }
+
+        /* Spine shadow */
+        .flipbook-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 16px;
+            height: 100%;
+            background: linear-gradient(to right, var(--page-shadow), transparent);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* Click zones — full width of flipbook (extend past the page) */
+        .flip-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            z-index: 15;
+        }
+
+        .flip-zone-prev {
+            left: 0;
+            width: 40%;
+            cursor: w-resize;
+        }
+
+        .flip-zone-next {
+            right: 0;
+            width: 40%;
+            cursor: e-resize;
+        }
+
+        /* Hover arrow hints */
+        .flip-zone::after {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: var(--bg);
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            line-height: 36px;
+            text-align: center;
+        }
+
+        .flip-zone-prev::after { content: '\2190'; left: 20px; }
+        .flip-zone-next::after { content: '\2192'; right: 20px; }
+
+        .flip-zone:hover::after { opacity: 0.5; }
+
+        /* Suppress arrows at boundaries */
+        .flip-zone.at-boundary {
+            cursor: default;
+        }
+
+        .flip-zone.at-boundary::after {
+            display: none !important;
+        }
+
+        /* Page curl (bottom right, clickable) */
+        .page-curl {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 44px;
+            height: 44px;
+            z-index: 16;
+            cursor: e-resize;
+            background:
+                linear-gradient(225deg,
+                    var(--bg-outer) 0%,
+                    var(--surface-2) 40%,
+                    transparent 50%
+                );
+            box-shadow: -2px -2px 6px rgba(0,0,0,0.05);
+            border-top-left-radius: 10px;
+            opacity: 0.75;
+            transition: opacity 0.2s, width 0.2s, height 0.2s;
+        }
+
+        .page-curl:hover {
+            opacity: 1;
+            width: 56px;
+            height: 56px;
+        }
+
+        .page-curl.at-boundary {
+            opacity: 0.25;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ========================================
+           BOTTOM BAR
+           ======================================== */
+        .bottom-bar {
+            height: var(--bottombar-h);
+            min-height: var(--bottombar-h);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .chapter-link {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 7px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .chapter-link:hover { border-color: var(--accent); }
+        .chapter-link:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .chapter-link .ch-dir {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .page-center {
+            text-align: center;
+        }
+
+        .page-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .page-info .current {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .keyboard-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+            margin-top: 2px;
+        }
+
+        .keyboard-hint kbd {
+            display: inline-block;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0 4px;
+            font-family: var(--font-ui);
+            font-size: 0.6rem;
+            margin: 0 1px;
+        }
+
+        /* Progress bar */
+        .page-progress {
+            height: 3px;
+            background: var(--border);
+            flex-shrink: 0;
+        }
+
+        .page-progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 900px) {
+            .flipbook-page { box-shadow: none; }
+            .flipbook { background: var(--bg); }
+        }
+
+        @media (max-width: 640px) {
+            .input-view { padding: 32px 16px; }
+            .input-view .title { font-size: 1.6rem; }
+            .flipbook-content { padding-left: 20px; padding-right: 20px; column-gap: 48px; }
+            .reader-toolbar { gap: 10px; }
+            .chapter-link { min-width: 80px; padding: 6px 10px; font-size: 0.7rem; }
+            .flip-zone-prev { width: 25%; }
+            .flip-zone-next { width: 25%; }
+            .page-curl { display: none; }
+            .keyboard-hint { display: none; }
+            .tb-divider { display: none; }
+            .save-btn span:not(.save-icon) { display: none; }
+            .save-btn { padding: 5px 10px; }
+        }
+
+        @media (max-width: 400px) {
+            .reader-toolbar { gap: 6px; flex-wrap: wrap; height: auto; min-height: var(--toolbar-h); padding: 6px 12px; }
+            .header { padding: 0 12px; }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo">Reader</div>
+        <div class="header-right">
+            <div class="theme-dots">
+                <div class="theme-dot t-light active" data-theme="" title="Light"></div>
+                <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
+                <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+            </div>
+            <button class="h-btn hidden" id="newBtn">&#8592; New</button>
+        </div>
+    </header>
+
+    <!-- INPUT VIEW -->
+    <div class="main-area" id="inputView">
+        <div class="input-view">
+            <h1 class="title">What would you like to read?</h1>
+            <p class="subtitle">Paste a link, upload a file, or type directly.</p>
+
+            <div class="segmented" role="tablist">
+                <button class="seg-btn active" data-panel="panel-url" role="tab" aria-selected="true">URL</button>
+                <button class="seg-btn" data-panel="panel-file" role="tab" aria-selected="false">Upload</button>
+                <button class="seg-btn" data-panel="panel-text" role="tab" aria-selected="false">Paste</button>
+            </div>
+
+            <div class="panel active" id="panel-url">
+                <div class="field">
+                    <label class="field-label" for="urlInput">Web address</label>
+                    <input type="url" class="text-input" id="urlInput" placeholder="https://example.com/article">
+                </div>
+                <button class="action-btn" id="fetchBtn">Fetch article</button>
+            </div>
+
+            <div class="panel" id="panel-file">
+                <div class="field">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-icon">&#128196;</div>
+                        <div class="drop-zone-text"><strong>Click to choose</strong> or drag a file here<br>.txt, .html</div>
+                        <input type="file" id="fileInput" accept=".txt,.html" hidden>
+                    </div>
+                </div>
+                <button class="action-btn" id="fileBtn" disabled>Load file</button>
+            </div>
+
+            <div class="panel" id="panel-text">
+                <div class="field">
+                    <label class="field-label" for="pasteInput">Your text</label>
+                    <textarea class="text-input" id="pasteInput" placeholder="Paste or type your text here..."></textarea>
+                </div>
+                <button class="action-btn" id="pasteBtn">Start reading</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- READER VIEW -->
+    <div class="reader-view" id="readerView">
+        <div class="reader-toolbar">
+            <div class="tb-group">
+                <span class="tb-label">Size</span>
+                <button class="tb-btn" id="fsDown" aria-label="Decrease font size">&#8722;</button>
+                <span class="tb-val" id="fsVal">20</span>
+                <button class="tb-btn" id="fsUp" aria-label="Increase font size">&#43;</button>
+            </div>
+            <div class="tb-group">
+                <span class="tb-label">Font</span>
+                <button class="tb-toggle" id="fontToggle">Serif</button>
+            </div>
+            <div class="tb-divider"></div>
+            <button class="save-btn" id="saveBtn" title="Save to library">
+                <span class="save-icon">&#9734;</span>
+                <span>Save</span>
+            </button>
+        </div>
+
+        <!-- FLIPBOOK -->
+        <div class="flipbook" id="flipbook">
+            <div class="flipbook-page">
+                <div class="flipbook-viewport">
+                    <div class="flipbook-content" id="flipContent">
+                        <h1>The Art of Readable Code</h1>
+                        <div class="meta">By Jane Doe</div>
+
+                        <p>The morning light filtered through the tall windows of the library, casting long golden rectangles across the worn hardwood floor. Sarah ran her fingers along the spines of books on the nearest shelf, feeling the embossed letters beneath her fingertips. Each title was a door to another world, and she had spent the better part of her life walking through them.</p>
+
+                        <p>She pulled a volume from the shelf — a clothbound edition with gilded edges that caught the light. The pages fell open to a passage she had underlined years ago, the ink now faded to a soft brown. Reading it again felt like meeting an old friend; the words were the same, but she had changed, and so the meaning shifted beneath her like sand reshaping under a gentle tide.</p>
+
+                        <p>"The best writing," her professor had once told her, "is the kind that disappears. You don't notice the sentences. You don't admire the structure. You simply find yourself somewhere else, living someone else's life, feeling things you've never felt. The craft becomes invisible, and all that remains is the experience."</p>
+
+                        <p>She had carried those words with her through graduate school, through three unpublished novels, through a decade of editing other people's manuscripts. The irony was not lost on her: she understood invisible craft better than anyone, yet her own writing remained stubbornly visible — every seam showing, every joint exposed like the skeleton of an unfinished building.</p>
+
+                        <p>The library was nearly empty at this hour. A few students hunched over laptops at the long tables, their faces lit by the blue-white glow of their screens. None of them were reading books. Sarah wondered if they ever did, or if the physical library had become merely a quiet place to consume digital content — a temple repurposed as a co-working space.</p>
+
+                        <p>She carried her book to the reading alcove by the east window — her favorite spot, the one with the cracked leather armchair that molded perfectly to her shape after years of use. The cushion exhaled softly as she sat down. She opened to the first chapter and began to read, and within moments the library dissolved around her.</p>
+
+                        <blockquote>"Reading is the sole means by which we slip, involuntarily, often helplessly, into another's skin, another's voice, another's soul." — Joyce Carol Oates</blockquote>
+
+                        <p>The story unfolded like a landscape seen from a moving train. First the broad strokes — the setting, the characters, the situation — presented with a confidence that assumed you would follow. Then the details began to accumulate: the way a character's hand trembled when she reached for the doorknob, the particular shade of blue the sky turned just before the storm, the sound of a clock ticking in an otherwise silent room.</p>
+
+                        <p>These details were not decorative. Each one carried weight, contributed to the atmospheric pressure of the narrative. Remove any single one and the story would still function, but something essential would be lost — like a chord missing its third, technically complete but emotionally hollow.</p>
+
+                        <p>Sarah read for an hour without looking up. When she finally surfaced, the light had changed. The golden rectangles had migrated across the floor and now climbed the far wall, stretching upward as the sun descended. The students had left. She was alone with the books and the dust motes turning slowly in the slanted light.</p>
+
+                        <p>She closed the book and held it in her lap for a moment, feeling its weight. Then she opened her notebook — the physical one, not her laptop — and began to write. Not her novel, not anything structured or purposeful. Just sentences. Observations. The raw material of thought, set down before it could evaporate.</p>
+
+                        <p>The pen moved across the page with a scratching sound that she found deeply satisfying. There was something about the physical act of writing — the resistance of the paper, the slight imperfection of handwritten letters, the way a crossed-out word remained visible beneath its cancellation — that digital writing could never replicate. Mistakes were not deleted; they were incorporated, becoming part of the visible history of the thought.</p>
+
+                        <p>She wrote about the library, about the light, about the book she had just read. She wrote about the gap between understanding craft and executing it, about the years of patient failure that might or might not lead somewhere. She wrote about the students and their screens, about the changing nature of reading, about what is gained and lost when words move from paper to pixels.</p>
+
+                        <p>When she looked up again, the library was dark. The automatic lights had dimmed to their evening setting, casting everything in a warm amber glow. She gathered her things and walked to the exit, pausing at the threshold to look back at the rows of shelves receding into shadow.</p>
+
+                        <p>Tomorrow she would return. She always did. The books would be waiting, patient and unchanging, ready to reveal new meanings to anyone willing to sit with them long enough. The library was not dying. It was simply waiting, as it always had, for the next reader to walk through its doors.</p>
+                    </div>
+                    <div class="page-shadow" id="pageShadow"></div>
+                </div>
+
+                <!-- Page curl (clickable — triggers next page) -->
+                <div class="page-curl" id="pageCurl" title="Next page"></div>
+            </div>
+
+            <!-- Click zones (span full flipbook width for easy edge clicking) -->
+            <div class="flip-zone flip-zone-prev" id="flipPrev" title="Previous page"></div>
+            <div class="flip-zone flip-zone-next" id="flipNext" title="Next page"></div>
+        </div>
+
+        <!-- BOTTOM BAR -->
+        <div class="bottom-bar">
+            <button class="chapter-link" id="chPrev">
+                <div class="ch-dir">&#8592; Prev</div>
+                <div>Chapter 3</div>
+            </button>
+            <div class="page-center">
+                <div class="page-info">
+                    <span class="current" id="pageNum">1</span> of <span id="pageTotal">1</span>
+                </div>
+                <div class="keyboard-hint">
+                    <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> to flip
+                </div>
+            </div>
+            <button class="chapter-link" id="chNext">
+                <div class="ch-dir">Next &#8594;</div>
+                <div>Chapter 5</div>
+            </button>
+        </div>
+
+        <div class="page-progress">
+            <div class="page-progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <div class="toast-dot" id="toastDot"></div>
+        <span id="toastMsg">Something went wrong</span>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ==========================================
+        // THEME
+        // ==========================================
+        const savedTheme = localStorage.getItem('reader-v2-theme') || '';
+        if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+        document.querySelectorAll('.theme-dot').forEach(dot => {
+            if (dot.dataset.theme === savedTheme) {
+                document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+            }
+            dot.addEventListener('click', () => {
+                document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                document.documentElement.setAttribute('data-theme', dot.dataset.theme);
+                localStorage.setItem('reader-v2-theme', dot.dataset.theme);
+                requestAnimationFrame(paginate);
+            });
+        });
+
+        // ==========================================
+        // SEGMENTED TABS
+        // ==========================================
+        document.querySelectorAll('.seg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.seg-btn').forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                document.getElementById(btn.dataset.panel).classList.add('active');
+            });
+        });
+
+        // ==========================================
+        // FILE DROP ZONE
+        // ==========================================
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileBtn = document.getElementById('fileBtn');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                fileBtn.disabled = false;
+                dropZone.classList.add('has-file');
+                dropZone.querySelector('.drop-zone-text').innerHTML =
+                    '<strong>' + e.dataTransfer.files[0].name + '</strong>';
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            fileBtn.disabled = !fileInput.files.length;
+            if (fileInput.files.length) {
+                dropZone.classList.add('has-file');
+                dropZone.querySelector('.drop-zone-text').innerHTML =
+                    '<strong>' + fileInput.files[0].name + '</strong>';
+            }
+        });
+
+        // ==========================================
+        // TOAST
+        // ==========================================
+        function showToast(msg, type) {
+            type = type || 'error';
+            document.getElementById('toastMsg').textContent = msg;
+            const dot = document.getElementById('toastDot');
+            dot.className = 'toast-dot ' + type;
+            const t = document.getElementById('toast');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // ==========================================
+        // VIEW SWITCHING
+        // ==========================================
+        const inputView = document.getElementById('inputView');
+        const readerView = document.getElementById('readerView');
+        const newBtn = document.getElementById('newBtn');
+
+        function showReader() {
+            inputView.classList.add('hidden');
+            readerView.classList.add('active');
+            newBtn.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(paginate);
+            });
+        }
+
+        function showInput() {
+            readerView.classList.remove('active');
+            inputView.classList.remove('hidden');
+            newBtn.classList.add('hidden');
+            currentPage = 0;
+            // Reset save state
+            document.getElementById('saveBtn').classList.remove('saved');
+            document.querySelector('#saveBtn .save-icon').innerHTML = '&#9734;';
+        }
+
+        newBtn.addEventListener('click', showInput);
+
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                btn.classList.add('loading');
+                setTimeout(() => {
+                    btn.classList.remove('loading');
+                    showReader();
+                }, 1200);
+            });
+        });
+
+        // ==========================================
+        // FONT SIZE (persisted)
+        // ==========================================
+        let fontSize = parseInt(localStorage.getItem('reader-v2-fs')) || 20;
+        const flipContent = document.getElementById('flipContent');
+        const fsVal = document.getElementById('fsVal');
+
+        function applyFontSize() {
+            flipContent.style.fontSize = fontSize + 'px';
+            fsVal.textContent = fontSize;
+            localStorage.setItem('reader-v2-fs', fontSize);
+            requestAnimationFrame(paginate);
+        }
+        applyFontSize();
+
+        document.getElementById('fsDown').addEventListener('click', () => {
+            if (fontSize > 14) { fontSize -= 2; applyFontSize(); }
+        });
+        document.getElementById('fsUp').addEventListener('click', () => {
+            if (fontSize < 36) { fontSize += 2; applyFontSize(); }
+        });
+
+        // ==========================================
+        // FONT TOGGLE (persisted)
+        // ==========================================
+        let isSerif = localStorage.getItem('reader-v2-font') !== 'sans';
+        const fontToggle = document.getElementById('fontToggle');
+
+        function applyFont() {
+            flipContent.style.fontFamily = isSerif
+                ? "'Source Serif 4', Georgia, serif"
+                : "'Inter', -apple-system, sans-serif";
+            flipContent.style.lineHeight = isSerif ? '1.72' : '1.65';
+            fontToggle.textContent = isSerif ? 'Serif' : 'Sans';
+            localStorage.setItem('reader-v2-font', isSerif ? 'serif' : 'sans');
+            requestAnimationFrame(paginate);
+        }
+        applyFont();
+
+        fontToggle.addEventListener('click', () => {
+            isSerif = !isSerif;
+            applyFont();
+        });
+
+        // ==========================================
+        // SAVE / BOOKMARK
+        // ==========================================
+        const saveBtn = document.getElementById('saveBtn');
+        let isSaved = false;
+
+        saveBtn.addEventListener('click', () => {
+            if (isSaved) {
+                // Unsave
+                isSaved = false;
+                saveBtn.classList.remove('saved');
+                saveBtn.querySelector('.save-icon').innerHTML = '&#9734;';
+                showToast('Removed from library', 'info');
+                // In production: DELETE /api/saved/:id
+            } else {
+                // Save
+                isSaved = true;
+                saveBtn.classList.add('saved');
+                saveBtn.querySelector('.save-icon').innerHTML = '&#9733;';
+
+                // POST to database
+                const articleData = {
+                    title: flipContent.querySelector('h1')
+                        ? flipContent.querySelector('h1').textContent : 'Untitled',
+                    url: document.getElementById('urlInput').value || null,
+                    content: flipContent.innerHTML,
+                    current_page: currentPage + 1,
+                    total_pages: totalPages,
+                    font_size: fontSize,
+                    font_family: isSerif ? 'serif' : 'sans',
+                    theme: localStorage.getItem('reader-v2-theme') || 'light',
+                    saved_at: new Date().toISOString()
+                };
+
+                // Production: POST to Flask API
+                // fetch('/api/save', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify(articleData)
+                // })
+                // .then(r => r.json())
+                // .then(data => showToast('Saved to library', 'success'))
+                // .catch(err => {
+                //     isSaved = false;
+                //     saveBtn.classList.remove('saved');
+                //     saveBtn.querySelector('.save-icon').innerHTML = '&#9734;';
+                //     showToast('Failed to save: ' + err.message, 'error');
+                // });
+
+                // Demo mode:
+                console.log('Save to DB:', articleData);
+                showToast('Saved to library', 'success');
+            }
+        });
+
+        // ==========================================
+        // FLIPBOOK ENGINE
+        // ==========================================
+        let currentPage = 0;
+        let totalPages = 1;
+        let isFlipping = false;
+        const pageShadow = document.getElementById('pageShadow');
+        const flipPrevZone = document.getElementById('flipPrev');
+        const flipNextZone = document.getElementById('flipNext');
+        const pageCurl = document.getElementById('pageCurl');
+
+        function getPageWidth() {
+            return document.querySelector('.flipbook-viewport').offsetWidth;
+        }
+
+        function getColumnGap() {
+            return parseInt(getComputedStyle(flipContent).columnGap) || 120;
+        }
+
+        function paginate() {
+            const viewport = document.querySelector('.flipbook-viewport');
+            if (!viewport) return;
+
+            const viewportHeight = viewport.offsetHeight;
+            const pageWidth = viewport.offsetWidth;
+            const gap = getColumnGap();
+
+            // --- Fix word/line cutoff ---
+            // Calculate the actual line-height in px
+            const computed = getComputedStyle(flipContent);
+            const currentFontSize = parseFloat(computed.fontSize);
+            const lineHeightRatio = parseFloat(computed.lineHeight) / currentFontSize;
+            const lineHeightPx = currentFontSize * lineHeightRatio;
+
+            // Fixed top padding, adjust bottom to make content area
+            // an exact multiple of line-height
+            const paddingTop = 48;
+            const minPaddingBottom = 24;
+            const rawContentHeight = viewportHeight - paddingTop - minPaddingBottom;
+            const linesPerPage = Math.floor(rawContentHeight / lineHeightPx);
+            const contentHeight = linesPerPage * lineHeightPx;
+            const adjustedPaddingBottom = viewportHeight - paddingTop - contentHeight;
+
+            // Apply the calculated height so columns break cleanly
+            flipContent.style.height = viewportHeight + 'px';
+            flipContent.style.paddingTop = paddingTop + 'px';
+            flipContent.style.paddingBottom = adjustedPaddingBottom + 'px';
+
+            // The actual column width is the viewport width minus horizontal padding
+            const padLeft = parseFloat(computed.paddingLeft) || 56;
+            const padRight = parseFloat(computed.paddingRight) || 56;
+            const actualColumnWidth = pageWidth - padLeft - padRight;
+
+            flipContent.style.columnWidth = actualColumnWidth + 'px';
+
+            // Force layout recalc
+            void flipContent.offsetHeight;
+
+            const scrollW = flipContent.scrollWidth;
+            const stepSize = actualColumnWidth + gap;
+            totalPages = Math.max(1, Math.round(scrollW / stepSize));
+
+            if (currentPage >= totalPages) currentPage = totalPages - 1;
+            if (currentPage < 0) currentPage = 0;
+
+            updatePosition(false);
+            updateUI();
+            updateBoundaries();
+        }
+
+        function updatePosition(animate) {
+            const pageWidth = getPageWidth();
+            const gap = getColumnGap();
+            const computed = getComputedStyle(flipContent);
+            const padLeft = parseFloat(computed.paddingLeft) || 56;
+            const padRight = parseFloat(computed.paddingRight) || 56;
+            const actualColumnWidth = pageWidth - padLeft - padRight;
+            const offset = currentPage * (actualColumnWidth + gap);
+
+            if (!animate) {
+                flipContent.style.transition = 'none';
+            } else {
+                flipContent.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            }
+
+            flipContent.style.transform = 'translateX(-' + offset + 'px)';
+
+            if (!animate) {
+                void flipContent.offsetHeight;
+                flipContent.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('pageNum').textContent = currentPage + 1;
+            document.getElementById('pageTotal').textContent = totalPages;
+            document.getElementById('progressFill').style.width =
+                totalPages > 1 ? ((currentPage / (totalPages - 1)) * 100) + '%' : '100%';
+        }
+
+        function updateBoundaries() {
+            // First page: suppress prev arrow
+            if (currentPage <= 0) {
+                flipPrevZone.classList.add('at-boundary');
+            } else {
+                flipPrevZone.classList.remove('at-boundary');
+            }
+
+            // Last page: suppress next arrow + page curl
+            if (currentPage >= totalPages - 1) {
+                flipNextZone.classList.add('at-boundary');
+                pageCurl.classList.add('at-boundary');
+            } else {
+                flipNextZone.classList.remove('at-boundary');
+                pageCurl.classList.remove('at-boundary');
+            }
+        }
+
+        function triggerShadow(direction) {
+            pageShadow.className = 'page-shadow';
+            void pageShadow.offsetHeight;
+            pageShadow.classList.add(direction === 'forward' ? 'flip-forward' : 'flip-backward');
+            setTimeout(() => { pageShadow.className = 'page-shadow'; }, 550);
+        }
+
+        function flipTo(page) {
+            if (isFlipping) return;
+            if (page < 0 || page >= totalPages) return;
+            if (page === currentPage) return;
+
+            isFlipping = true;
+            const direction = page > currentPage ? 'forward' : 'backward';
+            currentPage = page;
+
+            triggerShadow(direction);
+            updatePosition(true);
+            updateUI();
+            updateBoundaries();
+
+            setTimeout(() => { isFlipping = false; }, 530);
+        }
+
+        function flipNext() { flipTo(currentPage + 1); }
+        function flipPrev() { flipTo(currentPage - 1); }
+
+        // Click zones
+        flipNextZone.addEventListener('click', flipNext);
+        flipPrevZone.addEventListener('click', flipPrev);
+
+        // Page curl (clickable — next page)
+        pageCurl.addEventListener('click', flipNext);
+
+        // Keyboard
+        document.addEventListener('keydown', e => {
+            if (!readerView.classList.contains('active')) return;
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); flipNext(); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); flipPrev(); }
+            if (e.key === 'Home') { e.preventDefault(); flipTo(0); }
+            if (e.key === 'End') { e.preventDefault(); flipTo(totalPages - 1); }
+        });
+
+        // Touch swipe
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const flipbook = document.getElementById('flipbook');
+
+        flipbook.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        flipbook.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+                if (dx < 0) flipNext();
+                else flipPrev();
+            }
+        }, { passive: true });
+
+        // Resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(paginate, 150);
+        });
+
+        // Initial
+        paginate();
+
+    })();
+    </script>
+
+</body>
+</html>
