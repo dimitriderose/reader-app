@@ -1,0 +1,720 @@
+/* ========================================
+   READER / FLIPBOOK STYLES
+   Extracted from docs/design_v2.html
+   ======================================== */
+
+/* ----------------------------------------
+   INPUT VIEW
+   ---------------------------------------- */
+.input-view {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 56px 20px;
+    width: 100%;
+}
+
+.input-view .title {
+    font-family: var(--font-reading);
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 6px;
+}
+
+.input-view .subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 40px;
+}
+
+/* Segmented control */
+.segmented {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 28px;
+}
+
+.seg-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 9px 0;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.seg-btn:hover { color: var(--text); }
+
+.seg-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 1px 4px var(--page-shadow);
+}
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Form fields */
+.field { margin-bottom: 20px; }
+
+.field-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.text-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.text-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.text-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+textarea.text-input {
+    min-height: 180px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+/* Drop zone (file upload) */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 44px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+.drop-zone-icon { font-size: 1.8rem; margin-bottom: 10px; opacity: 0.35; }
+.drop-zone-text { color: var(--text-muted); font-size: 0.85rem; }
+.drop-zone-text strong { color: var(--text); }
+.drop-zone.has-file { border-style: solid; border-color: var(--accent); }
+
+/* Action button */
+.action-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.action-btn:hover { background: var(--accent-hover); }
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn.loading {
+    pointer-events: none;
+    color: transparent;
+}
+
+.action-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: white;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    margin: -10px 0 0 -10px;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error message for URL input */
+.input-error {
+    color: var(--error);
+    font-size: 0.8rem;
+    margin-top: 6px;
+    display: none;
+}
+
+.input-error.show { display: block; }
+
+/* ----------------------------------------
+   READER VIEW
+   ---------------------------------------- */
+.reader-view {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.reader-view.active { display: flex; }
+
+/* ----------------------------------------
+   TOOLBAR
+   ---------------------------------------- */
+.reader-toolbar {
+    height: var(--toolbar-h);
+    min-height: var(--toolbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 0 16px;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.tb-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+}
+
+.tb-label { font-weight: 500; }
+
+.tb-btn {
+    width: 30px;
+    height: 30px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.tb-btn:hover { border-color: var(--accent); }
+
+.tb-val {
+    min-width: 28px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.tb-toggle {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.tb-toggle:hover { border-color: var(--accent); }
+
+.tb-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+}
+
+/* ----------------------------------------
+   SAVE / BOOKMARK BUTTON
+   ---------------------------------------- */
+.save-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.save-btn:hover {
+    border-color: var(--save-color);
+    color: var(--save-color);
+}
+
+.save-btn.saved {
+    background: var(--save-color);
+    border-color: var(--save-color);
+    color: #fff;
+}
+
+.save-btn.saving {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.save-icon {
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: transform 0.2s;
+}
+
+.save-btn:hover .save-icon { transform: scale(1.15); }
+.save-btn.saved .save-icon { transform: scale(1.1); }
+
+/* ----------------------------------------
+   FLIPBOOK
+   ---------------------------------------- */
+.flipbook {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-outer);
+}
+
+/* Centered page container -- constrains line width */
+.flipbook-page {
+    max-width: 860px;
+    height: 100%;
+    margin: 0 auto;
+    position: relative;
+    background: var(--bg);
+    box-shadow:
+        -1px 0 0 var(--border),
+        1px 0 0 var(--border),
+        0 4px 24px var(--page-shadow),
+        0 1px 6px var(--page-shadow);
+}
+
+.flipbook-viewport {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* CSS columns for pagination */
+.flipbook-content {
+    /* height set dynamically by JS to be a multiple of line-height */
+    padding: 48px 56px;
+    padding-bottom: 48px; /* adjusted by JS */
+    column-fill: auto;
+    column-gap: 120px;
+    font-family: var(--font-reading);
+    font-size: var(--reader-fs, 20px);
+    line-height: 1.72;
+    color: var(--text);
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+    /* overflow is handled by .flipbook-viewport -- NOT here,
+       or it clips all columns beyond the first */
+}
+
+/* Content typography */
+.flipbook-content h1 {
+    font-size: 1.8em;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 0.4em;
+    letter-spacing: -0.02em;
+    break-after: avoid;
+    break-inside: avoid;
+}
+
+.flipbook-content h2 {
+    font-size: 1.4em;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    letter-spacing: -0.01em;
+    break-after: avoid;
+    break-inside: avoid;
+}
+
+.flipbook-content h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+    break-after: avoid;
+    break-inside: avoid;
+}
+
+.flipbook-content .meta {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.85em;
+    margin-bottom: 1.8em;
+    padding-bottom: 1.5em;
+    border-bottom: 1px solid var(--border);
+    break-after: avoid;
+    break-inside: avoid;
+}
+
+.flipbook-content p {
+    margin-bottom: 1.1em;
+    orphans: 3;
+    widows: 3;
+}
+
+.flipbook-content blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 20px;
+    margin: 1.5em 0;
+    font-style: italic;
+    color: var(--text-muted);
+    break-inside: avoid;
+}
+
+.flipbook-content ul,
+.flipbook-content ol {
+    margin-bottom: 1.1em;
+    padding-left: 1.5em;
+}
+
+.flipbook-content li {
+    margin-bottom: 0.4em;
+}
+
+.flipbook-content img {
+    max-width: 100%;
+    height: auto;
+    break-inside: avoid;
+}
+
+.flipbook-content a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.flipbook-content pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    line-height: 1.5;
+    margin-bottom: 1.1em;
+    break-inside: avoid;
+}
+
+.flipbook-content code {
+    font-size: 0.9em;
+    background: var(--surface-2);
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.flipbook-content pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Page fold shadow (animation overlay) */
+.page-shadow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+}
+
+.page-shadow.flip-forward {
+    background: linear-gradient(to left,
+        rgba(0, 0, 0, 0.07) 0%,
+        rgba(0, 0, 0, 0.03) 5%,
+        transparent 35%
+    );
+    opacity: 1;
+    animation: shadowForward 0.5s ease-out forwards;
+}
+
+.page-shadow.flip-backward {
+    background: linear-gradient(to right,
+        rgba(0, 0, 0, 0.07) 0%,
+        rgba(0, 0, 0, 0.03) 5%,
+        transparent 35%
+    );
+    opacity: 1;
+    animation: shadowBackward 0.5s ease-out forwards;
+}
+
+@keyframes shadowForward {
+    0% { opacity: 0; transform: translateX(30%); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-100%); }
+}
+
+@keyframes shadowBackward {
+    0% { opacity: 0; transform: translateX(-30%); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(100%); }
+}
+
+/* Spine shadow */
+.flipbook-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 100%;
+    background: linear-gradient(to right, var(--page-shadow), transparent);
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Click zones -- full width of flipbook (extend past the page) */
+.flip-zone {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    z-index: 15;
+}
+
+.flip-zone-prev {
+    left: 0;
+    width: 40%;
+    cursor: w-resize;
+}
+
+.flip-zone-next {
+    right: 0;
+    width: 40%;
+    cursor: e-resize;
+}
+
+/* Hover arrow hints */
+.flip-zone::after {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg);
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 36px;
+    text-align: center;
+}
+
+.flip-zone-prev::after { content: '\2190'; left: 20px; }
+.flip-zone-next::after { content: '\2192'; right: 20px; }
+
+.flip-zone:hover::after { opacity: 0.5; }
+
+/* Suppress arrows at boundaries */
+.flip-zone.at-boundary {
+    cursor: default;
+}
+
+.flip-zone.at-boundary::after {
+    display: none !important;
+}
+
+/* Page curl (bottom right, clickable) */
+.page-curl {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 44px;
+    height: 44px;
+    z-index: 16;
+    cursor: e-resize;
+    background:
+        linear-gradient(225deg,
+            var(--bg-outer) 0%,
+            var(--surface-2) 40%,
+            transparent 50%
+        );
+    box-shadow: -2px -2px 6px rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 10px;
+    opacity: 0.75;
+    transition: opacity 0.2s, width 0.2s, height 0.2s;
+}
+
+.page-curl:hover {
+    opacity: 1;
+    width: 56px;
+    height: 56px;
+}
+
+.page-curl.at-boundary {
+    opacity: 0.25;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* ----------------------------------------
+   BOTTOM BAR
+   ---------------------------------------- */
+.bottom-bar {
+    height: var(--bottombar-h);
+    min-height: var(--bottombar-h);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+.chapter-link {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 100px;
+    text-align: center;
+}
+
+.chapter-link:hover { border-color: var(--accent); }
+.chapter-link:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.chapter-link .ch-dir {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.page-center {
+    text-align: center;
+}
+
+.page-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.page-info .current {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.keyboard-hint {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+.keyboard-hint kbd {
+    display: inline-block;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    margin: 0 1px;
+}
+
+/* Progress bar */
+.page-progress {
+    height: 3px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.page-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+/* ----------------------------------------
+   RESPONSIVE
+   ---------------------------------------- */
+@media (max-width: 900px) {
+    .flipbook-page { box-shadow: none; }
+    .flipbook { background: var(--bg); }
+}
+
+@media (max-width: 640px) {
+    .input-view { padding: 32px 16px; }
+    .input-view .title { font-size: 1.6rem; }
+    .flipbook-content { padding-left: 20px; padding-right: 20px; column-gap: 48px; }
+    .reader-toolbar { gap: 10px; }
+    .chapter-link { min-width: 80px; padding: 6px 10px; font-size: 0.7rem; }
+    .flip-zone-prev { width: 25%; }
+    .flip-zone-next { width: 25%; }
+    .page-curl { display: none; }
+    .keyboard-hint { display: none; }
+    .tb-divider { display: none; }
+    .save-btn span:not(.save-icon) { display: none; }
+    .save-btn { padding: 5px 10px; }
+}
+
+@media (max-width: 400px) {
+    .reader-toolbar { gap: 6px; flex-wrap: wrap; height: auto; min-height: var(--toolbar-h); padding: 6px 12px; }
+}
