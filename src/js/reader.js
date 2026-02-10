@@ -10,6 +10,52 @@ import { getSession, setPendingSave } from './supabase.js';
 import { openAuthModal } from './auth.js';
 import { showToast } from './toast.js';
 import { applyTheme } from './theme.js';
+import { marked } from 'marked';
+
+// Configure marked for clean output
+marked.setOptions({
+    breaks: true,
+    gfm: true,
+});
+
+/**
+ * Lazy-load PDF.js only when needed (it's ~1MB).
+ * Returns the pdfjsLib module.
+ */
+let _pdfjsLib = null;
+async function getPdfJs() {
+    if (_pdfjsLib) return _pdfjsLib;
+    const mod = await import('pdfjs-dist');
+    // Load the worker source as raw text, then create a Blob URL.
+    // This avoids all Vite/bundler path-resolution issues.
+    const workerMod = await import('pdfjs-dist/build/pdf.worker.min.mjs?raw');
+    const blob = new Blob([workerMod.default], { type: 'application/javascript' });
+    mod.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    _pdfjsLib = mod;
+    return _pdfjsLib;
+}
+
+/**
+ * Heuristic: does the text contain enough markdown syntax to treat it as markdown?
+ */
+function looksLikeMarkdown(text) {
+    const markers = [
+        /^#{1,6}\s/m,           // headings
+        /\*\*.+?\*\*/,          // bold
+        /\[.+?\]\(.+?\)/,       // links
+        /^[-*]\s/m,             // unordered lists
+        /^\d+\.\s/m,            // ordered lists
+        /^```/m,                // code fences
+        /^>/m,                  // blockquotes
+        /^---$/m,               // horizontal rules
+        /\|.+\|/,              // tables
+    ];
+    let hits = 0;
+    for (const re of markers) {
+        if (re.test(text)) hits++;
+    }
+    return hits >= 2;
+}
 
 // ==========================================
 // STATE
@@ -603,13 +649,57 @@ function initFileDropZone() {
 
         fileBtn.classList.add('loading');
         const file = fileInput.files[0];
+        const nameLower = file.name.toLowerCase();
 
         try {
-            const text = await file.text();
             let html;
-            let title = file.name.replace(/\.(txt|html?)$/i, '');
+            let title = file.name.replace(/\.(txt|html?|md|markdown|pdf)$/i, '');
 
-            if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+            if (nameLower.endsWith('.pdf')) {
+                // PDF — render each page as an image via pdf.js canvas
+                const pdfjsLib = await getPdfJs();
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                if (pdf.numPages === 0) {
+                    showToast('This PDF has no pages.', 'error');
+                    fileBtn.classList.remove('loading');
+                    return;
+                }
+
+                const pageImages = [];
+                const scale = 2; // 2x for sharp rendering on retina
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    const ctx = canvas.getContext('2d');
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    pageImages.push(canvas.toDataURL('image/png'));
+                    page.cleanup();
+                }
+
+                // Build HTML with one image per page
+                html = pageImages
+                    .map(src => `<div class="pdf-page"><img src="${src}" alt="PDF page"></div>`)
+                    .join('\n');
+
+            } else if (nameLower.endsWith('.md') || nameLower.endsWith('.markdown')) {
+                // Markdown — parse to HTML
+                const text = await file.text();
+                html = marked.parse(text);
+
+                // Extract title from first # heading
+                const headingMatch = text.match(/^#\s+(.+)$/m);
+                if (headingMatch) {
+                    title = headingMatch[1].trim();
+                }
+
+            } else if (nameLower.endsWith('.html') || nameLower.endsWith('.htm')) {
+                const text = await file.text();
                 html = text;
                 // Try to extract title from HTML
                 const parser = new DOMParser();
@@ -618,13 +708,19 @@ function initFileDropZone() {
                 if (titleEl && titleEl.textContent.trim()) {
                     title = titleEl.textContent.trim();
                 }
+
             } else {
-                // Plain text — wrap paragraphs
-                html = text
-                    .split(/\n\s*\n/)
-                    .filter(p => p.trim())
-                    .map(p => '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>')
-                    .join('\n');
+                // Plain text — check if it's actually markdown
+                const text = await file.text();
+                if (looksLikeMarkdown(text)) {
+                    html = marked.parse(text);
+                } else {
+                    html = text
+                        .split(/\n\s*\n/)
+                        .filter(p => p.trim())
+                        .map(p => '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>')
+                        .join('\n');
+                }
             }
 
             loadArticle(html, { title, sourceUrl: null });
@@ -657,6 +753,10 @@ function initUrlFetch() {
         fetchBtn.classList.add('loading');
         try {
             const result = await api.post('/api/fetch', { url });
+            if (!result.content_html || !result.content_html.trim()) {
+                showToast('No readable content found on this page', 'error');
+                return;
+            }
             loadArticle(result.content_html, {
                 title: result.title || 'Untitled',
                 sourceUrl: url,
@@ -695,14 +795,24 @@ function initPasteText() {
             return;
         }
 
-        // Convert plain text to HTML paragraphs
-        const html = text
-            .split(/\n\s*\n/)
-            .filter(p => p.trim())
-            .map(p => '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>')
-            .join('\n');
+        let html;
+        let title = 'Pasted Text';
 
-        loadArticle(html, { title: 'Pasted Text', sourceUrl: null });
+        if (looksLikeMarkdown(text)) {
+            // Parse as markdown
+            html = marked.parse(text);
+            const headingMatch = text.match(/^#\s+(.+)$/m);
+            if (headingMatch) title = headingMatch[1].trim();
+        } else {
+            // Convert plain text to HTML paragraphs
+            html = text
+                .split(/\n\s*\n/)
+                .filter(p => p.trim())
+                .map(p => '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>')
+                .join('\n');
+        }
+
+        loadArticle(html, { title, sourceUrl: null });
     });
 }
 

@@ -460,6 +460,112 @@ textarea.text-input {
     padding: 0;
 }
 
+/* Markdown-rendered tables */
+.flipbook-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.1em;
+    font-size: 0.9em;
+    break-inside: avoid;
+}
+
+.flipbook-content thead {
+    border-bottom: 2px solid var(--border);
+}
+
+.flipbook-content th {
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 12px;
+    color: var(--text);
+}
+
+.flipbook-content td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.flipbook-content tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Horizontal rules */
+.flipbook-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.8em 0;
+}
+
+/* Task lists (GFM checkboxes) */
+.flipbook-content ul:has(input[type="checkbox"]) {
+    list-style: none;
+    padding-left: 0.5em;
+}
+
+.flipbook-content input[type="checkbox"] {
+    margin-right: 0.5em;
+    pointer-events: none;
+}
+
+/* Strong/em inside paragraphs */
+.flipbook-content strong {
+    font-weight: 600;
+}
+
+/* Definition-style content and nested lists */
+.flipbook-content ul ul,
+.flipbook-content ol ol,
+.flipbook-content ul ol,
+.flipbook-content ol ul {
+    margin-bottom: 0;
+    margin-top: 0.3em;
+}
+
+/* Images from markdown */
+.flipbook-content p > img {
+    display: block;
+    margin: 1em auto;
+}
+
+/* PDF rendered pages */
+.flipbook-content .pdf-page {
+    break-inside: avoid;
+    margin-bottom: 1em;
+    text-align: center;
+}
+
+.flipbook-content .pdf-page img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
+
+/* Headings h4-h6 */
+.flipbook-content h4 {
+    font-size: 1.05em;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+    break-after: avoid;
+    break-inside: avoid;
+}
+
+.flipbook-content h5,
+.flipbook-content h6 {
+    font-size: 0.95em;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 0.8em;
+    margin-bottom: 0.3em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    break-after: avoid;
+    break-inside: avoid;
+}
+
 /* Page fold shadow (animation overlay) */
 .page-shadow {
     position: absolute;
