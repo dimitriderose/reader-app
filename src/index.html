@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader App</title>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo" id="logoLink">Reader</div>
+        </div>
+        <div class="header-right">
+            <!-- Nav links (visible when signed in) -->
+            <nav class="header-nav hidden" id="headerNav">
+                <a class="nav-link" href="/library" data-view="library">Library</a>
+                <a class="nav-link" href="/history" data-view="history">History</a>
+            </nav>
+            <div class="nav-divider hidden" id="navDivider1"></div>
+            <!-- User avatar (visible when signed in) -->
+            <div class="user-avatar hidden" id="userAvatar" title="User">--</div>
+            <div class="nav-divider hidden" id="navDivider2"></div>
+            <!-- Theme dots (always visible) -->
+            <div class="theme-dots">
+                <div class="theme-dot t-light active" data-theme="" title="Light"></div>
+                <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
+                <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+            </div>
+            <!-- Sign-in button (visible when signed out) -->
+            <button class="signin-btn" id="headerSignin">Sign in</button>
+        </div>
+    </header>
+
+    <!-- VIEW CONTAINERS -->
+    <div class="main-area" id="inputView">
+        <div class="input-view">
+            <h1 class="title">What would you like to read?</h1>
+            <p class="subtitle">Paste a link, upload a file, or type directly.</p>
+
+            <div class="segmented" role="tablist">
+                <button class="seg-btn active" data-panel="panel-url" role="tab" aria-selected="true">URL</button>
+                <button class="seg-btn" data-panel="panel-file" role="tab" aria-selected="false">Upload</button>
+                <button class="seg-btn" data-panel="panel-text" role="tab" aria-selected="false">Paste</button>
+            </div>
+
+            <div class="panel active" id="panel-url">
+                <div class="field">
+                    <label class="field-label" for="urlInput">Web address</label>
+                    <input type="url" class="text-input" id="urlInput" placeholder="https://example.com/article">
+                </div>
+                <button class="action-btn" id="fetchBtn">Fetch article</button>
+            </div>
+
+            <div class="panel" id="panel-file">
+                <div class="field">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-icon">&#128196;</div>
+                        <div class="drop-zone-text"><strong>Click to choose</strong> or drag a file here<br>.txt, .html</div>
+                        <input type="file" id="fileInput" accept=".txt,.html" hidden>
+                    </div>
+                </div>
+                <button class="action-btn" id="fileBtn" disabled>Load file</button>
+            </div>
+
+            <div class="panel" id="panel-text">
+                <div class="field">
+                    <label class="field-label" for="pasteInput">Your text</label>
+                    <textarea class="text-input" id="pasteInput" placeholder="Paste or type your text here..."></textarea>
+                </div>
+                <button class="action-btn" id="pasteBtn">Start reading</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-area hidden" id="readerView" style="overflow:hidden">
+        <div class="reader-toolbar">
+            <div class="tb-group">
+                <span class="tb-label">Size</span>
+                <button class="tb-btn" id="fsDown" aria-label="Decrease font size">&#8722;</button>
+                <span class="tb-val" id="fsVal">20</span>
+                <button class="tb-btn" id="fsUp" aria-label="Increase font size">&#43;</button>
+            </div>
+            <div class="tb-group">
+                <span class="tb-label">Font</span>
+                <button class="tb-toggle" id="fontToggle">Serif</button>
+            </div>
+            <div class="tb-divider"></div>
+            <button class="save-btn" id="saveBtn" title="Save to library">
+                <span class="save-icon">&#9734;</span>
+                <span class="save-label">Save</span>
+            </button>
+        </div>
+
+        <div class="flipbook" id="flipbook">
+            <div class="flipbook-page">
+                <div class="flipbook-viewport">
+                    <div class="flipbook-content" id="flipContent"></div>
+                    <div class="page-shadow" id="pageShadow"></div>
+                </div>
+                <div class="page-curl" id="pageCurl" title="Next page"></div>
+            </div>
+
+            <div class="flip-zone flip-zone-prev" id="flipPrev" title="Previous page"></div>
+            <div class="flip-zone flip-zone-next" id="flipNext" title="Next page"></div>
+        </div>
+
+        <div class="bottom-bar">
+            <div></div>
+            <div class="page-center">
+                <div class="page-info">
+                    <span class="current" id="pageNum">1</span> of <span id="pageTotal">1</span>
+                </div>
+                <div class="keyboard-hint">
+                    <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> to flip
+                </div>
+            </div>
+            <div></div>
+        </div>
+
+        <div class="page-progress">
+            <div class="page-progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <div class="main-area hidden" id="libraryView">
+        <!-- Library content rendered by library.js -->
+    </div>
+
+    <div class="main-area hidden" id="historyView">
+        <!-- History content rendered by history.js -->
+    </div>
+
+    <!-- AUTH MODAL (always in DOM, hidden by default) -->
+    <div class="modal-backdrop" id="authModal">
+        <div class="modal" id="authModalContent">
+            <button class="modal-close" id="authModalClose" aria-label="Close">&#10005;</button>
+
+            <!-- STATE: Sign In -->
+            <div class="auth-state" id="stateSignin">
+                <h2 class="auth-title">Welcome back</h2>
+                <p class="auth-subtitle">Sign in to access your library</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button" id="googleSignin">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button" id="githubSignin">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <div class="auth-divider"><span>or</span></div>
+
+                <form id="signinForm" novalidate>
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="signinEmail">Email</label>
+                        <input type="email" class="auth-input" id="signinEmail" placeholder="you@example.com" autocomplete="email">
+                        <div class="field-error" id="signinEmailError">Please enter your email address</div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="signinPassword">Password</label>
+                        <input type="password" class="auth-input" id="signinPassword" placeholder="Enter your password" autocomplete="current-password">
+                        <div class="field-error" id="signinPasswordError">Please enter your password</div>
+                    </div>
+
+                    <div class="auth-row">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" checked>
+                            Remember me
+                        </label>
+                        <button type="button" class="auth-link-muted" id="forgotPasswordLink">Forgot password?</button>
+                    </div>
+
+                    <div class="auth-server-error" id="signinServerError"></div>
+                    <button type="submit" class="auth-submit" id="signinSubmit">Sign in</button>
+                </form>
+
+                <div class="auth-switch">
+                    Don't have an account? <button class="auth-switch-link" data-goto="register">Create one</button>
+                </div>
+            </div>
+
+            <!-- STATE: Create Account -->
+            <div class="auth-state" id="stateRegister">
+                <h2 class="auth-title">Create your account</h2>
+                <p class="auth-subtitle">Start saving and organizing your reading</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button" id="googleRegister">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button" id="githubRegister">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <div class="auth-divider"><span>or</span></div>
+
+                <form id="registerForm" novalidate>
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerName">Display name</label>
+                        <input type="text" class="auth-input" id="registerName" placeholder="Your name" autocomplete="name">
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerEmail">Email</label>
+                        <input type="email" class="auth-input" id="registerEmail" placeholder="you@example.com" autocomplete="email">
+                        <div class="field-error" id="registerEmailError">Please enter your email address</div>
+                    </div>
+
+                    <div class="auth-field">
+                        <label class="auth-field-label" for="registerPassword">Password</label>
+                        <input type="password" class="auth-input" id="registerPassword" placeholder="Create a password" autocomplete="new-password">
+                        <div class="field-error" id="registerPasswordError">Please enter a password</div>
+                        <div class="field-helper">At least 8 characters</div>
+                    </div>
+
+                    <div class="auth-server-error" id="registerServerError"></div>
+                    <button type="submit" class="auth-submit" id="registerSubmit">Create account</button>
+                </form>
+
+                <div class="auth-switch">
+                    Already have an account? <button class="auth-switch-link" data-goto="signin">Sign in</button>
+                </div>
+            </div>
+
+            <!-- STATE: Forgot Password -->
+            <div class="auth-state" id="stateForgot">
+                <button class="forgot-back-link" data-goto="signin">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                    Back to sign in
+                </button>
+
+                <div id="forgotForm" style="margin-top: 20px;">
+                    <div class="forgot-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="5" width="18" height="14" rx="2"/>
+                            <polyline points="3 7 12 13 21 7"/>
+                        </svg>
+                    </div>
+                    <h2 class="auth-title" style="text-align:center;">Reset your password</h2>
+                    <p class="auth-subtitle" style="text-align:center;">Enter the email you signed up with and we'll send a reset link.</p>
+
+                    <form id="forgotFormEl" novalidate>
+                        <div class="auth-field">
+                            <label class="auth-field-label" for="forgotEmail">Email</label>
+                            <input type="email" class="auth-input" id="forgotEmail" placeholder="you@example.com" autocomplete="email">
+                            <div class="field-error" id="forgotEmailError">Please enter your email address</div>
+                        </div>
+
+                        <div class="auth-server-error" id="forgotServerError"></div>
+                        <button type="submit" class="auth-submit" id="forgotSubmit">Send reset link</button>
+                    </form>
+                </div>
+
+                <div class="forgot-success" id="forgotSuccess">
+                    <div class="forgot-success-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    </div>
+                    <h2 class="forgot-success-title">Check your email</h2>
+                    <p class="forgot-success-text">We sent a password reset link to <strong id="forgotSentEmail">you@example.com</strong>. Check your inbox and follow the link to reset your password.</p>
+                    <button type="button" class="auth-submit" data-goto="signin">Return to sign in</button>
+                </div>
+            </div>
+
+            <!-- STATE: Sign In Prompt (shown when saving while logged out) -->
+            <div class="auth-state" id="statePrompt">
+                <h2 class="prompt-title">Sign in to save</h2>
+                <p class="prompt-subtitle">Create a free account to save articles and sync across devices.</p>
+
+                <div class="oauth-section">
+                    <button class="oauth-btn oauth-btn-google" type="button" id="googlePrompt">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn oauth-btn-github" type="button" id="githubPrompt">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path d="M9 0C4.03 0 0 4.03 0 9c0 3.978 2.579 7.35 6.154 8.54.45.083.614-.195.614-.433 0-.213-.008-.78-.012-1.53-2.504.544-3.032-1.207-3.032-1.207-.41-1.04-1-1.317-1-1.317-.816-.558.062-.546.062-.546.903.063 1.378.927 1.378.927.802 1.374 2.105.977 2.617.747.082-.581.314-.977.571-1.201-1.999-.227-4.1-1-4.1-4.449 0-.983.351-1.787.927-2.416-.093-.228-.402-1.143.088-2.382 0 0 .756-.242 2.475.923A8.63 8.63 0 019 4.344a8.64 8.64 0 012.256.303c1.718-1.165 2.473-.923 2.473-.923.491 1.24.182 2.154.089 2.382.577.629.926 1.433.926 2.416 0 3.458-2.104 4.219-4.11 4.441.323.278.611.828.611 1.668 0 1.204-.011 2.175-.011 2.471 0 .241.162.52.619.432C15.424 16.347 18 12.975 18 9c0-4.97-4.03-9-9-9z" fill="white"/>
+                        </svg>
+                        Continue with GitHub
+                    </button>
+                </div>
+
+                <button type="button" class="prompt-email-link" data-goto="signin">or sign in with email</button>
+
+                <button type="button" class="prompt-dismiss" id="promptDismiss">Maybe later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <div class="toast-dot" id="toastDot"></div>
+        <span id="toastMsg"></span>
+        <button class="toast-undo" id="toastUndo" style="display:none;">Undo</button>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>
