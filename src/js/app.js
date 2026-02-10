@@ -153,7 +153,12 @@ function bindNavLinks() {
 
     const logo = document.getElementById('logoLink');
     if (logo) {
-        logo.addEventListener('click', () => navigate('/'));
+        logo.addEventListener('click', () => {
+            // Always reset to input view, even if already on '/'
+            // (e.g. when reader is open, URL is still '/')
+            history.pushState(null, '', '/');
+            showView('input');
+        });
     }
 }
 

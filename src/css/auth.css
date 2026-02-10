@@ -144,28 +144,28 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* GitHub OAuth button */
-.oauth-btn-github {
-    background: #24292e;
+/* Apple OAuth button */
+.oauth-btn-apple {
+    background: #000000;
     color: #ffffff;
 }
 
-.oauth-btn-github:hover {
-    background: #1b1f23;
+.oauth-btn-apple:hover {
+    background: #1a1a1a;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="dark"] .oauth-btn-github {
+[data-theme="dark"] .oauth-btn-apple {
     background: #f0f0f0;
-    color: #24292e;
+    color: #000000;
 }
 
-[data-theme="dark"] .oauth-btn-github:hover {
+[data-theme="dark"] .oauth-btn-apple:hover {
     background: #ffffff;
 }
 
-[data-theme="dark"] .oauth-btn-github svg path {
-    fill: #24292e;
+[data-theme="dark"] .oauth-btn-apple svg path {
+    fill: #000000;
 }
 
 /* ----------------------------------------

@@ -246,8 +246,8 @@ async function handleForgotPassword(email) {
 }
 
 /**
- * Initiate OAuth sign-in (Google or GitHub).
- * @param {'google'|'github'} provider
+ * Initiate OAuth sign-in (Google or Apple).
+ * @param {'google'|'apple'} provider
  */
 async function handleOAuthSignIn(provider) {
     const { error } = await supabase.auth.signInWithOAuth({ provider });
@@ -519,9 +519,9 @@ function bindOAuthEvents() {
         btn.addEventListener('click', () => handleOAuthSignIn('google'));
     });
 
-    // GitHub OAuth buttons
-    document.querySelectorAll('#authModalContent .oauth-btn-github').forEach(btn => {
-        btn.addEventListener('click', () => handleOAuthSignIn('github'));
+    // Apple OAuth buttons
+    document.querySelectorAll('#authModalContent .oauth-btn-apple').forEach(btn => {
+        btn.addEventListener('click', () => handleOAuthSignIn('apple'));
     });
 }
 

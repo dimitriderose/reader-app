@@ -24,6 +24,8 @@ def fetch_url():
 
     try:
         result = fetch_and_parse(url)
+        if not result.get('content_html', '').strip():
+            return jsonify({'error': 'Could not extract content from this page. The site may require JavaScript or block automated access.'}), 422
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 422
