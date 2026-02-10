@@ -201,14 +201,163 @@ This is the largest sprint. The 4 mockup HTML files are the source material.
 
 ---
 
-## Sprint Summary
+## Feature Branches
 
-| Sprint | Phases | Effort | Key Deliverable |
-|--------|--------|--------|-----------------|
-| **1** | 1-3 | Backend scaffold + DB + auth | `flask run` + JWT auth working |
-| **2** | 4 | Core API | All endpoints testable via curl |
-| **3** | 5-7 | Full frontend | Complete SPA wired to live API |
-| **4** | 8 | Deploy | Public URL, all PRD criteria passing |
+8 branches, merged sequentially into `main`. Each branch is a self-contained, reviewable unit. Tasks 1.16 and 1.17 are already complete (committed in initial commit).
 
-### Start with Sprint 1
-Sprint 1 has 17 tasks. Begin with directory structure (1.1), then create files bottom-up: extensions → config → models → middleware → blueprints → app factory → entry point.
+### Merge Order
+
+```
+main ← feature/project-scaffold
+     ← feature/database-and-auth
+     ← feature/api-endpoints
+     ← feature/frontend-foundation
+     ← feature/frontend-auth
+     ← feature/frontend-reader
+     ← feature/frontend-library-history
+     ← feature/deploy
+```
+
+---
+
+### Branch 1: `feature/project-scaffold`
+
+**Sprint 1 tasks** — Directory structure, dependencies, app factory, config, extensions, services, entry point, Vite, frontend shell, Docker.
+
+| Task | Description | Files |
+|------|-------------|-------|
+| 1.1 | Create directory structure | `app/`, `src/`, `tests/`, etc. |
+| 1.2 | Write `requirements.txt` | `requirements.txt` |
+| 1.3 | Write app factory | `app/__init__.py` |
+| 1.4 | Write config | `app/config.py` |
+| 1.5 | Write extensions | `app/extensions.py` |
+| 1.10 | Extract scraper into service | `app/services/scraper.py` (from `reader_app.py` — M13) |
+| 1.11 | Write word count service | `app/services/word_count.py` |
+| 1.12 | Update entry point | `reader_app.py` (after 1.10) |
+| 1.13 | Write Vite config | `package.json`, `vite.config.js` |
+| 1.14 | Write minimal frontend shell | `src/index.html`, `src/js/app.js` |
+| 1.15 | Write Docker files | `Dockerfile`, `docker-compose.yml` |
+
+**Verify:** `pip install` succeeds, `flask run` starts, `npm run dev` starts Vite.
+
+---
+
+### Branch 2: `feature/database-and-auth`
+
+**Sprint 1 tasks** — SQLAlchemy models, migrations, blueprint stubs, JWT middleware, user endpoints.
+
+| Task | Description | Files |
+|------|-------------|-------|
+| 1.6 | Write 4 SQLAlchemy models | `app/models/*.py` (M2, M11) |
+| 1.7 | Create blueprint stubs | `app/api/*.py` |
+| 1.8 | Write JWT auth middleware | `app/middleware/auth.py` (M7 — `__init__.py`) |
+| 1.9 | Write user endpoints | `app/api/user.py` |
+
+**Verify:** `flask db migrate && flask db upgrade` creates 4 tables. `curl /api/user/profile` with JWT returns profile, without JWT returns 401.
+
+---
+
+### Branch 3: `feature/api-endpoints`
+
+**Sprint 2 tasks** — All CRUD endpoints + tests.
+
+| Task | Description | Files |
+|------|-------------|-------|
+| 2.1 | Implement fetch endpoint | `app/api/fetch.py` |
+| 2.2 | Implement articles CRUD | `app/api/articles.py` (6 endpoints, M9) |
+| 2.3 | Implement collections CRUD | `app/api/collections.py` (4 endpoints) |
+| 2.4 | Implement history CRUD | `app/api/history.py` (6 endpoints, upsert) |
+| 2.5 | Write API tests | `tests/conftest.py`, `tests/test_*.py` |
+
+**Verify:** All curl commands pass. Save → list → update → delete flows work. Cascades work (delete collection → articles uncategorized, delete article → history.article_id NULL). `pytest tests/` passes.
+
+---
+
+### Branch 4: `feature/frontend-foundation`
+
+**Sprint 3 tasks** — Shared CSS, SPA shell, Supabase client, API wrapper, theme, toast, router.
+
+| Task | Description | Files | Source |
+|------|-------------|-------|--------|
+| 3.1 | Extract shared CSS | `src/css/base.css` | All 4 mockups |
+| 3.2 | Build SPA shell | `src/index.html` | Combine mockup headers |
+| 3.3 | Write Supabase client | `src/js/supabase.js` | New |
+| 3.4 | Write API wrapper | `src/js/api.js` | New |
+| 3.5 | Write theme module | `src/js/theme.js` | All mockups |
+| 3.6 | Write toast module | `src/js/toast.js` | Library + History mockups |
+| 3.7 | Write router | `src/js/app.js` | New |
+
+**Verify:** Vite dev server renders SPA shell. Router navigates between `/`, `/library`, `/history`. Theme switching works. Toast displays.
+
+---
+
+### Branch 5: `feature/frontend-auth`
+
+**Sprint 3 task** — Auth modal with all 4 states, wired to Supabase Auth.
+
+| Task | Description | Files | Source |
+|------|-------------|-------|--------|
+| 3.8 | Build auth modal | `src/js/auth.js`, `src/css/auth.css` | `mockup_auth.html` (1341 lines) |
+
+**Verify:** Sign up with email, sign in, sign out, forgot password flow, Google/GitHub OAuth. Header updates on auth state change.
+
+---
+
+### Branch 6: `feature/frontend-reader`
+
+**Sprint 3 tasks** — Flipbook engine, save button, position sync, history auto-logging.
+
+| Task | Description | Files | Source |
+|------|-------------|-------|--------|
+| 3.9 | Build reader (flipbook) | `src/js/reader.js`, `src/css/reader.css` | `design_v2.html` (1397 lines) |
+| 3.10 | Wire save button | Part of `reader.js` | pendingSave + toggle |
+| 3.11 | Wire position auto-save | Part of `reader.js` | Debounce + sendBeacon |
+| 3.12 | Wire history auto-log | Part of `reader.js` | Web Crypto SHA-256 (M3) |
+
+**Verify:** Fetch URL → read → save → toast. Page flip persists position. Logged-out save → auth modal → auto-save (Flow A). History entry created on article open.
+
+---
+
+### Branch 7: `feature/frontend-library-history`
+
+**Sprint 3 tasks** — Library and history pages, wired to API.
+
+| Task | Description | Files | Source |
+|------|-------------|-------|--------|
+| 3.13 | Build library page | `src/js/library.js`, `src/css/library.css` | `mockup_library.html` (1626 lines) |
+| 3.14 | Build history page | `src/js/history.js`, `src/css/history.css` | `mockup_history.html` (1426 lines) |
+
+**Verify:** Library shows saved articles, sort/filter/collections work, remove + undo (M5). History shows date-grouped entries, delete single, clear all. Click article → opens in reader.
+
+---
+
+### Branch 8: `feature/deploy`
+
+**Sprint 4 tasks** — Railway deployment, production config, OAuth URLs, E2E testing.
+
+| Task | Description |
+|------|-------------|
+| 4.1 | Commit all work to GitHub |
+| 4.2 | Create Railway project |
+| 4.3 | Set Railway environment variables (7 vars) |
+| 4.4 | Run production migration |
+| 4.5 | Configure Supabase OAuth redirect URLs |
+| 4.6 | End-to-end testing (10 PRD criteria) |
+| 4.7 | Fix production-only issues |
+
+**Verify:** All 10 PRD verification criteria pass at public Railway URL.
+
+---
+
+### Branch Summary
+
+| # | Branch | Tasks | Sprint | Key Output |
+|---|--------|-------|--------|------------|
+| 1 | `feature/project-scaffold` | 1.1-1.5, 1.10-1.15 | 1 | Flask + Vite running |
+| 2 | `feature/database-and-auth` | 1.6-1.9 | 1 | Tables + JWT auth |
+| 3 | `feature/api-endpoints` | 2.1-2.5 | 2 | Full API + tests |
+| 4 | `feature/frontend-foundation` | 3.1-3.7 | 3 | SPA shell + shared modules |
+| 5 | `feature/frontend-auth` | 3.8 | 3 | Auth modal |
+| 6 | `feature/frontend-reader` | 3.9-3.12 | 3 | Flipbook + save + sync |
+| 7 | `feature/frontend-library-history` | 3.13-3.14 | 3 | Library + History pages |
+| 8 | `feature/deploy` | 4.1-4.7 | 4 | Live at Railway URL |
