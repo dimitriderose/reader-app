@@ -10,8 +10,9 @@
 - [ ] JS-rendered sites fail (MSN, Bloomberg, etc.) — consider headless browser (Playwright/Puppeteer) or a third-party API (Diffbot, Mercury Parser)
 - [ ] Add support for paywalled content via reader-mode extraction (similar to Firefox Reader View)
 - [x] PDF file support — renders pages visually via pdf.js canvas (lazy-loaded, ~445KB chunk)
+- [ ] PDF clickable links — extract link annotations via `page.getAnnotations()`, overlay transparent `<a>` elements over rendered page images
 - [x] Markdown file support — parsed with `marked` (GFM, tables, code fences, task lists)
-- [x] EPUB file support — JSZip extraction with LCP passphrase decryption, Adobe DRM detection
+- [x] EPUB file support — JSZip extraction with LCP passphrase decryption, Adobe DRM detection, clickable TOC/chapter links
 - [ ] Better error messages per domain (e.g., "This site requires JavaScript" vs "Access denied")
 
 ## Reader Experience
@@ -21,6 +22,9 @@
 - [ ] Bookmark specific pages within an article
 - [ ] Text highlighting and annotation
 - [ ] Text-to-speech integration
+- [ ] Night reading mode with blue light filter
+- [ ] Adjustable line height and margins
+- [ ] Progress bar per chapter (for EPUBs)
 
 ## Library & Collections
 - [ ] Drag-and-drop to reorder collections
@@ -28,11 +32,15 @@
 - [ ] Bulk actions (select multiple articles, move/delete)
 - [ ] Search/filter articles by title or domain
 - [ ] Import/export library (JSON or OPML)
+- [ ] Sort collections alphabetically or by date
+- [ ] Article tags/labels (separate from collections)
 
 ## History
 - [ ] "Save to library" button directly on history entries
 - [ ] Filter history by date range
 - [ ] Search history by title
+- [ ] Clear all history option
+- [ ] Auto-delete history older than N days (configurable)
 
 ## Performance & Infrastructure
 - [ ] Deploy to Railway (Dockerfile exists, needs env vars configured)
@@ -41,11 +49,16 @@
 - [ ] Flask serves built static files in production (already configured in app factory)
 - [ ] Add rate limiting to API endpoints
 - [ ] Add request logging / error monitoring (Sentry)
+- [ ] CDN for static assets
+- [ ] Gzip/Brotli compression for API responses
+- [ ] Database connection pooling
 
 ## Testing
 - [ ] Backend API tests (`tests/` directory exists, needs test cases)
 - [ ] Frontend smoke tests (Playwright or Cypress)
 - [ ] Test auth flow end-to-end (sign up, sign in, sign out, password reset)
+- [ ] EPUB parsing edge cases (malformed EPUBs, large files, missing metadata)
+- [ ] PDF rendering tests (multi-page, encrypted, large files)
 
 ## UI Polish
 - [ ] Loading skeleton screens for library and history views
@@ -53,3 +66,14 @@
 - [ ] PWA manifest for "Add to Home Screen"
 - [ ] Responsive improvements for tablets
 - [ ] Keyboard shortcuts help modal (? key)
+- [ ] Onboarding tooltip/tour for first-time users
+- [ ] Drag-and-drop file upload animation
+- [ ] Smooth page transition animations
+- [ ] Dark mode improvements (better contrast, OLED black option)
+
+## Accessibility
+- [ ] Screen reader support (ARIA labels, roles, live regions)
+- [ ] High contrast mode
+- [ ] Reduced motion preference support
+- [ ] Focus indicators for keyboard navigation
+- [ ] Alt text for PDF page images
