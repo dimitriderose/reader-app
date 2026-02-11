@@ -8,3 +8,6 @@ python-dotenv==1.1.*
 beautifulsoup4==4.13.*
 requests==2.32.*
 gunicorn==23.0.*
+cloudscraper==1.2.*
+playwright==1.49.*
+playwright-stealth==1.0.*
