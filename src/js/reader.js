@@ -36,6 +36,227 @@ async function getPdfJs() {
 }
 
 /**
+ * Lazy-load JSZip only when needed (for EPUB parsing).
+ */
+let _JSZip = null;
+async function getJSZip() {
+    if (_JSZip) return _JSZip;
+    const mod = await import('jszip');
+    _JSZip = mod.default || mod;
+    return _JSZip;
+}
+
+/**
+ * Parse an EPUB file from an ArrayBuffer.
+ * Returns { title, html } with chapter content concatenated.
+ */
+async function parseEpub(arrayBuffer) {
+    const JSZip = await getJSZip();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+
+    // --- DRM detection ---
+    if (zip.file('META-INF/rights.xml') && !zip.file('license.lcpl')) {
+        throw new Error('DRM_ADOBE');
+    }
+
+    // --- LCP detection & decryption ---
+    let contentKey = null;
+    let encryptedPaths = new Set();
+
+    if (zip.file('license.lcpl')) {
+        const lcplJson = JSON.parse(await zip.file('license.lcpl').async('text'));
+        const encKeyB64 = lcplJson?.encryption?.content_key?.encrypted_value;
+        if (!encKeyB64) throw new Error('DRM_LCP_UNSUPPORTED');
+
+        // Prompt for passphrase
+        const passphrase = await promptForPassphrase();
+        if (!passphrase) throw new Error('LCP_CANCELLED');
+
+        // SHA-256 hash the passphrase → User Key
+        const encoder = new TextEncoder();
+        const passphraseHash = await crypto.subtle.digest('SHA-256', encoder.encode(passphrase));
+        const userKey = await crypto.subtle.importKey(
+            'raw', passphraseHash, { name: 'AES-CBC' }, false, ['decrypt']
+        );
+
+        // Decrypt the content key
+        const encKeyBytes = Uint8Array.from(atob(encKeyB64), c => c.charCodeAt(0));
+        const iv = encKeyBytes.slice(0, 16);
+        const ciphertext = encKeyBytes.slice(16);
+
+        let decryptedKey;
+        try {
+            decryptedKey = await crypto.subtle.decrypt(
+                { name: 'AES-CBC', iv }, userKey, ciphertext
+            );
+        } catch {
+            throw new Error('LCP_WRONG_PASSPHRASE');
+        }
+
+        contentKey = await crypto.subtle.importKey(
+            'raw', decryptedKey, { name: 'AES-CBC' }, false, ['decrypt']
+        );
+
+        // Parse encryption.xml to find which files are encrypted
+        const encXml = zip.file('META-INF/encryption.xml');
+        if (encXml) {
+            const encDoc = new DOMParser().parseFromString(
+                await encXml.async('text'), 'application/xml'
+            );
+            encDoc.querySelectorAll('CipherReference').forEach(ref => {
+                const uri = ref.getAttribute('URI');
+                if (uri) encryptedPaths.add(uri);
+            });
+        }
+    }
+
+    // Helper: read a file from the ZIP, decrypting if needed
+    async function readZipFile(path, asType = 'text') {
+        const file = zip.file(path);
+        if (!file) return null;
+
+        if (contentKey && encryptedPaths.has(path)) {
+            const encrypted = await file.async('uint8array');
+            const iv = encrypted.slice(0, 16);
+            const cipher = encrypted.slice(16);
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-CBC', iv }, contentKey, cipher
+            );
+            if (asType === 'text') return new TextDecoder().decode(decrypted);
+            return decrypted;
+        }
+
+        return file.async(asType === 'text' ? 'text' : 'uint8array');
+    }
+
+    // --- Parse container.xml → find OPF path ---
+    const containerXml = await readZipFile('META-INF/container.xml');
+    if (!containerXml) throw new Error('Invalid EPUB: missing container.xml');
+
+    const containerDoc = new DOMParser().parseFromString(containerXml, 'application/xml');
+    const rootfile = containerDoc.querySelector('rootfile');
+    const opfPath = rootfile?.getAttribute('full-path');
+    if (!opfPath) throw new Error('Invalid EPUB: no rootfile found');
+
+    // OPF directory (chapter hrefs are relative to this)
+    const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
+
+    // --- Parse OPF → manifest + spine + metadata ---
+    const opfXml = await readZipFile(opfPath);
+    if (!opfXml) throw new Error('Invalid EPUB: missing OPF file');
+
+    const opfDoc = new DOMParser().parseFromString(opfXml, 'application/xml');
+
+    // Title
+    const titleEl = opfDoc.querySelector('metadata title') ||
+                     opfDoc.querySelector('dc\\:title, title');
+    const title = titleEl?.textContent?.trim() || '';
+
+    // Manifest: id → { href, mediaType }
+    const manifest = {};
+    opfDoc.querySelectorAll('manifest item').forEach(item => {
+        manifest[item.getAttribute('id')] = {
+            href: item.getAttribute('href'),
+            mediaType: item.getAttribute('media-type'),
+        };
+    });
+
+    // Spine: ordered list of idref
+    const spine = [];
+    opfDoc.querySelectorAll('spine itemref').forEach(ref => {
+        spine.push(ref.getAttribute('idref'));
+    });
+
+    // --- Read and process chapters ---
+    const chapters = [];
+
+    for (const idref of spine) {
+        const item = manifest[idref];
+        if (!item) continue;
+        const mediaType = item.mediaType || '';
+        if (!mediaType.includes('html') && !mediaType.includes('xml')) continue;
+
+        const chapterPath = opfDir + item.href;
+        const chapterHtml = await readZipFile(chapterPath);
+        if (!chapterHtml) continue;
+
+        // Parse and extract body content
+        const doc = new DOMParser().parseFromString(chapterHtml, 'application/xhtml+xml');
+        const body = doc.querySelector('body');
+        if (!body || !body.innerHTML.trim()) continue;
+
+        // Convert images: replace relative src with base64 data URIs
+        const images = body.querySelectorAll('img');
+        for (const img of images) {
+            const src = img.getAttribute('src');
+            if (!src || src.startsWith('data:')) continue;
+
+            // Resolve relative path from chapter location
+            const chapterDir = chapterPath.includes('/')
+                ? chapterPath.substring(0, chapterPath.lastIndexOf('/') + 1)
+                : opfDir;
+            const imgPath = resolveRelativePath(chapterDir, src);
+
+            const imgData = await readZipFile(imgPath, 'binary');
+            if (imgData) {
+                // Determine MIME type from manifest or extension
+                const ext = src.split('.').pop().toLowerCase();
+                const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp' };
+                const mime = mimeMap[ext] || 'image/png';
+                const b64 = arrayBufferToBase64(imgData instanceof ArrayBuffer ? imgData : imgData.buffer);
+                img.setAttribute('src', `data:${mime};base64,${b64}`);
+            }
+        }
+
+        chapters.push({ href: item.href, html: body.innerHTML });
+    }
+
+    if (chapters.length === 0) {
+        throw new Error('Could not extract content from this EPUB.');
+    }
+
+    const html = chapters
+        .map(ch => `<div class="epub-chapter" data-epub-src="${ch.href}">${ch.html}</div>`)
+        .join('\n');
+
+    return { title, html };
+}
+
+/** Resolve a relative path (e.g., "../images/foo.png") against a base directory. */
+function resolveRelativePath(base, rel) {
+    if (rel.startsWith('/')) return rel.substring(1);
+    const parts = base.split('/').filter(Boolean);
+    for (const seg of rel.split('/')) {
+        if (seg === '..') parts.pop();
+        else if (seg !== '.') parts.push(seg);
+    }
+    return parts.join('/');
+}
+
+/** Convert an ArrayBuffer to a base64 string. */
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+/**
+ * Prompt the user for an LCP passphrase.
+ * Returns the passphrase string, or null if cancelled.
+ */
+function promptForPassphrase() {
+    return new Promise(resolve => {
+        const passphrase = window.prompt(
+            'This EPUB is protected with LCP.\nPlease enter your passphrase to unlock it:'
+        );
+        resolve(passphrase);
+    });
+}
+
+/**
  * Heuristic: does the text contain enough markdown syntax to treat it as markdown?
  */
 function looksLikeMarkdown(text) {
@@ -147,6 +368,93 @@ async function logToHistory(title, sourceUrl, contentHtml, page, total) {
             currentHistoryEntryId = result.entry.id;
         }
     }).catch(err => console.error('History log failed:', err));
+}
+
+// ==========================================
+// INTERNAL LINK NAVIGATION (EPUB TOC etc.)
+// ==========================================
+
+/**
+ * Calculate which flipbook page an element lives on and flip to it.
+ */
+function navigateToElement(el) {
+    if (!flipContent) return;
+
+    const gap = getColumnGap();
+    const pageWidth = getPageWidth();
+    const computed = getComputedStyle(flipContent);
+    const padLeft = parseFloat(computed.paddingLeft) || 56;
+    const padRight = parseFloat(computed.paddingRight) || 56;
+    const actualColumnWidth = pageWidth - padLeft - padRight;
+    const stepSize = actualColumnWidth + gap;
+
+    // offsetLeft gives position within the multi-column flow
+    const page = Math.floor(el.offsetLeft / stepSize);
+    flipTo(Math.max(0, Math.min(page, totalPages - 1)));
+}
+
+/**
+ * Delegated click handler for internal links (EPUB chapter links, TOC, etc.).
+ * Intercepts clicks on <a> tags with internal hrefs and navigates within the flipbook.
+ */
+function handleInternalLink(e) {
+    const link = e.target.closest('a[href]');
+    if (!link || !flipContent) return;
+
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    // Let external links open in a new tab
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        return;
+    }
+
+    e.preventDefault();
+
+    // Parse href into file part and fragment (e.g. "chapter2.xhtml#section1")
+    let filePart = '';
+    let fragment = '';
+    const hashIndex = href.indexOf('#');
+    if (hashIndex >= 0) {
+        filePart = href.substring(0, hashIndex);
+        fragment = href.substring(hashIndex + 1);
+    } else {
+        filePart = href;
+    }
+
+    let targetEl = null;
+
+    // Try fragment ID first — most specific
+    if (fragment) {
+        targetEl = document.getElementById(fragment);
+        // Make sure it's inside our content
+        if (targetEl && !flipContent.contains(targetEl)) targetEl = null;
+    }
+
+    // If no fragment match, find the chapter div by file path
+    if (!targetEl && filePart) {
+        // Try exact match on data-epub-src
+        targetEl = flipContent.querySelector('[data-epub-src="' + filePart + '"]');
+
+        // Try matching by filename (last path segment) for relative links
+        if (!targetEl) {
+            const fileName = filePart.split('/').pop();
+            const chapters = flipContent.querySelectorAll('.epub-chapter[data-epub-src]');
+            for (const ch of chapters) {
+                const src = ch.dataset.epubSrc;
+                if (src === fileName || src.endsWith('/' + fileName)) {
+                    targetEl = ch;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (targetEl) {
+        navigateToElement(targetEl);
+    }
 }
 
 // ==========================================
@@ -653,7 +961,7 @@ function initFileDropZone() {
 
         try {
             let html;
-            let title = file.name.replace(/\.(txt|html?|md|markdown|pdf)$/i, '');
+            let title = file.name.replace(/\.(txt|html?|md|markdown|pdf|epub)$/i, '');
 
             if (nameLower.endsWith('.pdf')) {
                 // PDF — render each page as an image via pdf.js canvas
@@ -686,6 +994,28 @@ function initFileDropZone() {
                 html = pageImages
                     .map(src => `<div class="pdf-page"><img src="${src}" alt="PDF page"></div>`)
                     .join('\n');
+
+            } else if (nameLower.endsWith('.epub')) {
+                // EPUB — extract chapters via JSZip
+                try {
+                    const result = await parseEpub(await file.arrayBuffer());
+                    html = result.html;
+                    if (result.title) title = result.title;
+                } catch (epubErr) {
+                    if (epubErr.message === 'DRM_ADOBE') {
+                        showToast('This EPUB uses Adobe DRM which is not supported. Please use a DRM-free version.', 'error');
+                    } else if (epubErr.message === 'LCP_WRONG_PASSPHRASE') {
+                        showToast('Incorrect passphrase. Please try again.', 'error');
+                    } else if (epubErr.message === 'LCP_CANCELLED') {
+                        // User cancelled — do nothing
+                    } else if (epubErr.message === 'DRM_LCP_UNSUPPORTED') {
+                        showToast('This EPUB has unsupported LCP encryption.', 'error');
+                    } else {
+                        showToast('Failed to read EPUB: ' + epubErr.message, 'error');
+                    }
+                    fileBtn.classList.remove('loading');
+                    return;
+                }
 
             } else if (nameLower.endsWith('.md') || nameLower.endsWith('.markdown')) {
                 // Markdown — parse to HTML
@@ -1069,6 +1399,9 @@ export function initReader() {
 
     // Page curl click
     if (pageCurl) pageCurl.addEventListener('click', flipNext);
+
+    // Internal EPUB link navigation (TOC, chapter cross-references)
+    if (flipContent) flipContent.addEventListener('click', handleInternalLink);
 
     // Keyboard navigation
     document.addEventListener('keydown', handleKeydown);

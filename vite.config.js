@@ -7,6 +7,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   root: 'src',
   envDir: resolve(__dirname),
+  optimizeDeps: {
+    include: ['jszip', 'pdfjs-dist'],
+  },
   build: {
     outDir: resolve(__dirname, 'app/static/dist'),
     emptyOutDir: true,

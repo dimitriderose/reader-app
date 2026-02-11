@@ -541,6 +541,22 @@ textarea.text-input {
     margin: 0 auto;
 }
 
+/* EPUB chapter sections */
+.flipbook-content .epub-chapter {
+    break-before: column;
+}
+
+.flipbook-content .epub-chapter:first-child {
+    break-before: auto;
+}
+
+.flipbook-content .epub-chapter img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1em auto;
+}
+
 /* Headings h4-h6 */
 .flipbook-content h4 {
     font-size: 1.05em;
@@ -633,13 +649,13 @@ textarea.text-input {
 
 .flip-zone-prev {
     left: 0;
-    width: 40%;
+    width: 56px;
     cursor: w-resize;
 }
 
 .flip-zone-next {
     right: 0;
-    width: 40%;
+    width: 56px;
     cursor: e-resize;
 }
 
@@ -812,8 +828,8 @@ textarea.text-input {
     .flipbook-content { padding-left: 20px; padding-right: 20px; column-gap: 48px; }
     .reader-toolbar { gap: 10px; }
     .chapter-link { min-width: 80px; padding: 6px 10px; font-size: 0.7rem; }
-    .flip-zone-prev { width: 25%; }
-    .flip-zone-next { width: 25%; }
+    .flip-zone-prev { width: 20px; }
+    .flip-zone-next { width: 20px; }
     .page-curl { display: none; }
     .keyboard-hint { display: none; }
     .tb-divider { display: none; }

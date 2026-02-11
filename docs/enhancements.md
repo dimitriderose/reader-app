@@ -11,7 +11,7 @@
 - [ ] Add support for paywalled content via reader-mode extraction (similar to Firefox Reader View)
 - [x] PDF file support — renders pages visually via pdf.js canvas (lazy-loaded, ~445KB chunk)
 - [x] Markdown file support — parsed with `marked` (GFM, tables, code fences, task lists)
-- [ ] EPUB file support
+- [x] EPUB file support — JSZip extraction with LCP passphrase decryption, Adobe DRM detection
 - [ ] Better error messages per domain (e.g., "This site requires JavaScript" vs "Access denied")
 
 ## Reader Experience
