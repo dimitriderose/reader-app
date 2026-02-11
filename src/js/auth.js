@@ -249,12 +249,15 @@ async function handleForgotPassword(email) {
 }
 
 /**
- * Initiate OAuth sign-in (Google or Apple).
- * @param {'google'|'apple'} provider
+ * Initiate OAuth sign-in.
+ * @param {'google'} provider
  */
 async function handleOAuthSignIn(provider) {
     if (!supabase) { showToast('Authentication not configured', 'error'); return; }
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+    });
 
     if (error) {
         showToast(error.message || `${provider} sign-in failed`, 'error');
@@ -523,10 +526,6 @@ function bindOAuthEvents() {
         btn.addEventListener('click', () => handleOAuthSignIn('google'));
     });
 
-    // Apple OAuth buttons
-    document.querySelectorAll('#authModalContent .oauth-btn-apple').forEach(btn => {
-        btn.addEventListener('click', () => handleOAuthSignIn('apple'));
-    });
 }
 
 function bindInputClearErrors() {
