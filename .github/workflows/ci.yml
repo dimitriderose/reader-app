@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: placeholder
+
+      - name: Build Docker image
+        run: docker build -t reader-app .
+
+      - name: Verify health check endpoint
+        run: |
+          docker run -d --name test-app \
+            -p 5000:5000 \
+            -e FLASK_ENV=production \
+            -e DATABASE_URL=sqlite:///test.db \
+            -e SUPABASE_URL=https://placeholder.supabase.co \
+            -e SUPABASE_PUBLISHABLE_KEY=placeholder \
+            reader-app
+          sleep 5
+          curl -f http://localhost:5000/healthz || (docker logs test-app && exit 1)
+          docker stop test-app

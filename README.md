@@ -88,6 +88,74 @@ reader-app/
 
    Open `http://localhost:5173` in your browser.
 
+## Deploying to Railway
+
+### First-time setup
+
+1. Create a [Railway](https://railway.app) account and install the CLI:
+   ```bash
+   npm install -g @railway/cli
+   railway login
+   ```
+
+2. Create a new project and link it:
+   ```bash
+   railway init
+   railway link
+   ```
+
+3. Set environment variables in the Railway dashboard (or via CLI):
+   ```bash
+   railway variables set FLASK_ENV=production
+   railway variables set DATABASE_URL=postgresql://postgres:password@db.xxxx.supabase.co:5432/postgres
+   railway variables set SUPABASE_URL=https://xxxx.supabase.co
+   railway variables set SUPABASE_PUBLISHABLE_KEY=eyJ...
+   railway variables set VITE_SUPABASE_URL=https://xxxx.supabase.co
+   railway variables set VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...
+   ```
+
+4. Deploy:
+   ```bash
+   railway up
+   ```
+
+   Railway will build using the Dockerfile and expose the app on a public URL.
+
+### Automated deployments (CI/CD)
+
+To enable auto-deploy on every push to `main`:
+
+1. In the Railway dashboard, go to your project settings and generate a **Deploy Token**.
+2. In your GitHub repo, go to **Settings > Secrets > Actions** and add:
+   - `RAILWAY_TOKEN` — your Railway deploy token
+3. Push to `main` — the GitHub Actions workflow will run tests, build, and deploy automatically.
+
+### Health check
+
+The app exposes a `/healthz` endpoint that verifies database connectivity. Railway uses this to determine when the deployment is healthy.
+
+## Docker (local)
+
+Build and run locally with Docker:
+
+```bash
+docker build -t reader-app .
+docker run -p 5000:5000 --env-file .env reader-app
+```
+
+Or use Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+## Running Tests
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
 ## Legacy CLI Scraper
 
 The standalone web scraper is still available:
