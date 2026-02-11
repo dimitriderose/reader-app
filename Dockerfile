@@ -1,6 +1,11 @@
 # Stage 1: Build frontend
 FROM node:18-alpine AS frontend
 WORKDIR /build
+
+# Accept Supabase config as build args so Vite can inline them
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 COPY src/ src/
