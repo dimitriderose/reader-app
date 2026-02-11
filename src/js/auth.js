@@ -254,7 +254,10 @@ async function handleForgotPassword(email) {
  */
 async function handleOAuthSignIn(provider) {
     if (!supabase) { showToast('Authentication not configured', 'error'); return; }
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+    });
 
     if (error) {
         showToast(error.message || `${provider} sign-in failed`, 'error');
