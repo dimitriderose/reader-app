@@ -43,10 +43,11 @@
 - [ ] Auto-delete history older than N days (configurable)
 
 ## Performance & Infrastructure
-- [ ] Deploy to Railway (Dockerfile exists, needs env vars configured)
+- [x] Deploy to Railway — live at https://reader-app-production-2989.up.railway.app/ (Docker multi-stage build, Gunicorn, health checks, auto-deploy on push)
+- [x] Vite production build optimization — frontend built in Docker stage 1, served by Flask in production
+- [x] Flask serves built static files in production (SPA catch-all route)
 - [ ] Set up Supabase OAuth redirect URLs for production domain
-- [ ] Vite production build optimization (`npm run build`)
-- [ ] Flask serves built static files in production (already configured in app factory)
+- [ ] Configure Railway env vars for full auth support (VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, DATABASE_URL)
 - [ ] Add rate limiting to API endpoints
 - [ ] Add request logging / error monitoring (Sentry)
 - [ ] CDN for static assets

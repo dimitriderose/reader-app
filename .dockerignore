@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+
+# Build output (rebuilt in Docker)
+app/static/dist/
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+.claude/
+docs/
+tests/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.pyc
+*.pyo
+*.md
+docker-compose.yml

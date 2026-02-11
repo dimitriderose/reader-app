@@ -167,6 +167,7 @@ function bindNavLinks() {
 // ==========================================
 
 function listenAuthState() {
+    if (!supabase) return;
     supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
             // Handle Flow A: pending save

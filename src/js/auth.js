@@ -172,6 +172,7 @@ export function closeAuthModal() {
  * Sign in with email + password via Supabase.
  */
 async function handleSignIn(email, password) {
+    if (!supabase) { showToast('Authentication not configured', 'error'); return; }
     setLoading(signinSubmit, true);
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -193,6 +194,7 @@ async function handleSignIn(email, password) {
  * Register a new account with email + password via Supabase.
  */
 async function handleRegister(email, password, displayName) {
+    if (!supabase) { showToast('Authentication not configured', 'error'); return; }
     setLoading(registerSubmit, true);
 
     const options = {};
@@ -228,6 +230,7 @@ async function handleRegister(email, password, displayName) {
  * Send a password reset email via Supabase.
  */
 async function handleForgotPassword(email) {
+    if (!supabase) { showToast('Authentication not configured', 'error'); return; }
     setLoading(forgotSubmit, true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email);
@@ -250,6 +253,7 @@ async function handleForgotPassword(email) {
  * @param {'google'|'apple'} provider
  */
 async function handleOAuthSignIn(provider) {
+    if (!supabase) { showToast('Authentication not configured', 'error'); return; }
     const { error } = await supabase.auth.signInWithOAuth({ provider });
 
     if (error) {
@@ -312,7 +316,7 @@ function updateHeaderUI(user) {
                 signOutBtn.onclick = async (e) => {
                     e.stopPropagation();
                     dropdown.remove();
-                    await supabase.auth.signOut();
+                    if (supabase) await supabase.auth.signOut();
                     showToast('Signed out', 'info');
                 };
 
@@ -553,6 +557,7 @@ function bindInputClearErrors() {
 // ---------------------------------------------------------------------------
 
 function listenAuthStateChanges() {
+    if (!supabase) return;
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
             updateHeaderUI(session.user);
@@ -636,7 +641,9 @@ export function initAuth() {
     listenAuthRequired();
 
     // --- Check current session on load ---
-    supabase.auth.getSession().then(({ data }) => {
-        updateHeaderUI(data.session?.user || null);
-    });
+    if (supabase) {
+        supabase.auth.getSession().then(({ data }) => {
+            updateHeaderUI(data.session?.user || null);
+        });
+    }
 }
