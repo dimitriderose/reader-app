@@ -12,6 +12,7 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+instance/
 
 # Node
 node_modules/
