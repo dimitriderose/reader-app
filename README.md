@@ -2,6 +2,8 @@
 
 A distraction-free article reader with flipbook-style pagination, user accounts, a personal library, reading history, and multi-device sync.
 
+**Live:** https://reader-app-production-2989.up.railway.app/
+
 ## Tech Stack
 
 | Layer | Choice |
