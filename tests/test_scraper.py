@@ -247,32 +247,36 @@ class TestFallbackChain:
 
     @patch('app.services.scraper.requests.get')
     def test_cloudflare_detected_escalates(self, mock_get):
-        """Cloudflare challenge page is not treated as content."""
+        """Cloudflare challenge page triggers escalation, returns best-effort if no fallbacks."""
         mock_resp = MagicMock()
         mock_resp.text = _cloudflare_html()
         mock_resp.raise_for_status = MagicMock()
         mock_get.return_value = mock_resp
 
-        # No fallbacks → returns best effort (the CF page itself)
         with patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', False), \
              patch('app.services.scraper.PLAYWRIGHT_AVAILABLE', False):
-            # CF page has no last_html set (cloudflare branch doesn't set it)
-            # and no fallbacks → ScrapeError
-            with pytest.raises(ScrapeError):
-                fetch_and_parse('https://protected-site.com/article')
+            # CF page is stored as last_html, returned as best-effort
+            result = fetch_and_parse('https://protected-site.com/article')
+            assert result['scrape_method'] == 'requests'
 
-    @patch('app.services.scraper.JS_REQUIRED_DOMAINS', frozenset({'tmz.com'}))
     @patch('app.services.scraper.fetch_with_cloudscraper')
     @patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', True)
     @patch('app.services.scraper.PLAYWRIGHT_AVAILABLE', False)
     @patch('app.services.scraper.requests.get')
-    def test_js_required_domain_skips_requests(self, mock_get, mock_cs):
-        """Known JS domains skip the requests layer entirely."""
+    def test_requests_always_tried_first_even_for_js_sites(self, mock_get, mock_cs):
+        """Requests is always attempted first; escalation is signal-driven."""
+        # requests returns thin content (JS shell)
+        mock_resp = MagicMock()
+        mock_resp.text = _make_thin_html()
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        # cloudscraper returns good content
         mock_cs.return_value = _make_article_html(100, 'TMZ Story')
 
         result = fetch_and_parse('https://www.tmz.com/article')
 
-        mock_get.assert_not_called()
+        mock_get.assert_called_once()  # requests was tried first
         assert result['scrape_method'] == 'cloudscraper'
 
     @patch('app.services.scraper.requests.get')

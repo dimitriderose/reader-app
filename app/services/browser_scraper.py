@@ -36,17 +36,6 @@ except ImportError:
 # Minimum word count — content below this is likely a JS shell, not real content
 THIN_CONTENT_THRESHOLD = 50
 
-# Domains known to require JS rendering — skip straight to browser
-JS_REQUIRED_DOMAINS = frozenset({
-    'tmz.com',
-    'pagesix.com',
-    'people.com',
-    'soompi.com',
-    'eonline.com',
-    'usmagazine.com',
-    'msn.com',
-})
-
 _USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
     'AppleWebKit/537.36 (KHTML, like Gecko) '

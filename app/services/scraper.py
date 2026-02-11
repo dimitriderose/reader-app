@@ -21,7 +21,6 @@ from .browser_scraper import (
     fetch_with_cloudscraper,
     fetch_with_playwright,
     THIN_CONTENT_THRESHOLD,
-    JS_REQUIRED_DOMAINS,
     CLOUDSCRAPER_AVAILABLE,
     PLAYWRIGHT_AVAILABLE,
     get_scraper_capabilities,
@@ -197,37 +196,40 @@ def fetch_and_parse(url: str) -> dict:
     if cached is not None:
         return cached
 
-    domain = extract_domain(url)
     last_html = None
+    needs_escalation = False
     error_detail = None
 
-    # --- Layer 1: requests (skip for known JS-heavy domains) ---
-    if domain not in JS_REQUIRED_DOMAINS:
-        try:
-            response = requests.get(url, headers=_HEADERS, timeout=15)
-            response.raise_for_status()
-            raw_html = response.text
+    # --- Layer 1: requests (always tried first) ---
+    try:
+        response = requests.get(url, headers=_HEADERS, timeout=15)
+        response.raise_for_status()
+        raw_html = response.text
 
-            if _is_cloudflare_challenge(raw_html):
-                logger.info('Cloudflare challenge for %s, escalating', url)
+        if _is_cloudflare_challenge(raw_html):
+            logger.info('Cloudflare challenge for %s, escalating', url)
+            last_html = raw_html
+            needs_escalation = True
+        else:
+            content_html, title = extract_text_and_nav_from_html(raw_html)
+            if not _is_thin_content(content_html):
+                result = _build_result(title, content_html, url, 'requests')
+                _set_cached(url, result)
+                return result
             else:
-                content_html, title = extract_text_and_nav_from_html(raw_html)
-                if not _is_thin_content(content_html):
-                    result = _build_result(title, content_html, url, 'requests')
-                    _set_cached(url, result)
-                    return result
-                else:
-                    logger.info(
-                        'Thin content from requests for %s (%d words), escalating',
-                        url, count_words(content_html),
-                    )
-                    last_html = raw_html
-        except requests.RequestException as e:
-            logger.info('requests failed for %s: %s, escalating', url, e)
-            error_detail = str(e)
+                logger.info(
+                    'Thin content from requests for %s (%d words), escalating',
+                    url, count_words(content_html),
+                )
+                last_html = raw_html
+                needs_escalation = True
+    except requests.RequestException as e:
+        logger.info('requests failed for %s: %s, escalating', url, e)
+        error_detail = str(e)
+        needs_escalation = True
 
-    # --- Layer 2: cloudscraper ---
-    if CLOUDSCRAPER_AVAILABLE:
+    # --- Layer 2: cloudscraper (only if layer 1 failed or returned bad content) ---
+    if needs_escalation and CLOUDSCRAPER_AVAILABLE:
         raw_html = fetch_with_cloudscraper(url)
         if raw_html:
             content_html, title = extract_text_and_nav_from_html(raw_html)
@@ -239,8 +241,8 @@ def fetch_and_parse(url: str) -> dict:
                 logger.info('Thin content from cloudscraper for %s, escalating', url)
                 last_html = raw_html
 
-    # --- Layer 3: Playwright ---
-    if PLAYWRIGHT_AVAILABLE:
+    # --- Layer 3: Playwright (only if prior layers failed or returned bad content) ---
+    if needs_escalation and PLAYWRIGHT_AVAILABLE:
         raw_html = fetch_with_playwright(url)
         if raw_html:
             content_html, title = extract_text_and_nav_from_html(raw_html)
