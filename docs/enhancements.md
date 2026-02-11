@@ -2,7 +2,6 @@
 
 ## Authentication
 - [ ] Configure Google OAuth in Supabase (Dashboard → Auth → Providers → Google) — requires Google Cloud Console OAuth 2.0 credentials (Client ID + Secret), add Supabase callback URL as authorized redirect URI
-- [ ] Configure Apple Sign In (requires Apple Developer account: Service ID, Team ID, Key)
 - [ ] Add email confirmation flow (currently `mailer_autoconfirm: false` in Supabase)
 - [ ] Password reset UI (form exists in auth modal, needs testing with Supabase email templates)
 
