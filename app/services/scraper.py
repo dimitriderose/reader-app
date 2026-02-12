@@ -127,8 +127,8 @@ def _fetch_msn_article(url: str) -> dict | None:
         body_html = data.get('body', '')
         if not body_html:
             return None
-        content_html, fallback_title = extract_text_and_nav_from_html(body_html)
-        return _build_result(title or fallback_title, content_html, url, 'msn_api')
+        content_html, fallback_title, lang = extract_text_and_nav_from_html(body_html)
+        return _build_result(title or fallback_title, content_html, url, 'msn_api', lang)
     except Exception as e:
         logger.info('MSN API failed for %s: %s, falling back to scraper chain', url, e)
         return None
@@ -141,13 +141,17 @@ def extract_text_and_nav_from_html(html: str) -> tuple:
     area and extracts cleaned text.
 
     Returns:
-        tuple: (content_html, title)
+        tuple: (content_html, title, lang)
     """
     soup = BeautifulSoup(html, 'html.parser')
 
     # Extract title before cleaning
     title_tag = soup.find('title')
     title = title_tag.get_text(strip=True) if title_tag else ''
+
+    # Extract lang attribute from <html> tag
+    html_tag = soup.find('html')
+    lang = html_tag.get('lang', '') if html_tag else ''
 
     # Remove script/style elements
     for script_or_style in soup(['script', 'style']):
@@ -194,7 +198,7 @@ def extract_text_and_nav_from_html(html: str) -> tuple:
     if not title and paragraphs:
         title = paragraphs[0][:200]
 
-    return content_html, title
+    return content_html, title, lang
 
 
 def _is_thin_content(content_html: str) -> bool:
@@ -214,14 +218,17 @@ def _is_cloudflare_challenge(html: str) -> bool:
     return any(indicator in html for indicator in indicators)
 
 
-def _build_result(title, content_html, url, method):
-    return {
+def _build_result(title, content_html, url, method, lang=''):
+    result = {
         'title': title,
         'content_html': content_html,
         'word_count': count_words(content_html),
         'source_domain': extract_domain(url),
         'scrape_method': method,
     }
+    if lang:
+        result['lang'] = lang
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -273,9 +280,9 @@ def fetch_and_parse(url: str) -> dict:
             last_html = raw_html
             needs_escalation = True
         else:
-            content_html, title = extract_text_and_nav_from_html(raw_html)
+            content_html, title, lang = extract_text_and_nav_from_html(raw_html)
             if not _is_thin_content(content_html):
-                result = _build_result(title, content_html, url, 'requests')
+                result = _build_result(title, content_html, url, 'requests', lang)
                 _set_cached(url, result)
                 return result
             else:
@@ -294,9 +301,9 @@ def fetch_and_parse(url: str) -> dict:
     if needs_escalation and CLOUDSCRAPER_AVAILABLE:
         raw_html = fetch_with_cloudscraper(url)
         if raw_html:
-            content_html, title = extract_text_and_nav_from_html(raw_html)
+            content_html, title, lang = extract_text_and_nav_from_html(raw_html)
             if not _is_thin_content(content_html):
-                result = _build_result(title, content_html, url, 'cloudscraper')
+                result = _build_result(title, content_html, url, 'cloudscraper', lang)
                 _set_cached(url, result)
                 return result
             else:
@@ -308,9 +315,9 @@ def fetch_and_parse(url: str) -> dict:
     if needs_escalation and PLAYWRIGHT_AVAILABLE:
         raw_html = fetch_with_playwright(url)
         if raw_html:
-            content_html, title = extract_text_and_nav_from_html(raw_html)
+            content_html, title, lang = extract_text_and_nav_from_html(raw_html)
             if not _is_thin_content(content_html):
-                result = _build_result(title, content_html, url, 'playwright')
+                result = _build_result(title, content_html, url, 'playwright', lang)
                 _set_cached(url, result)
                 return result
             else:
@@ -320,8 +327,8 @@ def fetch_and_parse(url: str) -> dict:
 
     # --- Best effort: return whatever we got, even if thin ---
     if last_html is not None:
-        content_html, title = extract_text_and_nav_from_html(last_html)
-        result = _build_result(title, content_html, url, last_method)
+        content_html, title, lang = extract_text_and_nav_from_html(last_html)
+        result = _build_result(title, content_html, url, last_method, lang)
         _set_cached(url, result)
         return result
 

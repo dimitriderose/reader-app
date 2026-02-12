@@ -1092,6 +1092,7 @@ function initUrlFetch() {
             loadArticle(result.content_html, {
                 title: result.title || 'Untitled',
                 sourceUrl: url,
+                lang: result.lang || '',
             });
         } catch (err) {
             showToast('Failed to fetch: ' + err.message, 'error');
@@ -1235,6 +1236,13 @@ function loadArticle(contentHtml, options = {}) {
     // Set content
     flipContent.innerHTML = contentHtml;
 
+    // Propagate lang attribute from source page for audio language detection
+    if (options.lang) {
+        flipContent.setAttribute('lang', options.lang);
+    } else {
+        flipContent.removeAttribute('lang');
+    }
+
     // Set up audio reader with the new content
     setAudioContent(flipContent);
 
@@ -1341,6 +1349,7 @@ export async function loadUrl(url) {
         loadArticle(result.content_html, {
             title: result.title || 'Untitled',
             sourceUrl: url,
+            lang: result.lang || '',
         });
     } catch (err) {
         showToast('Failed to fetch: ' + err.message, 'error');

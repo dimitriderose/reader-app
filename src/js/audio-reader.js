@@ -417,11 +417,11 @@ function cycleSpeed() {
  * Returns a BCP-47 primary language subtag (e.g. 'en', 'fr', 'ja').
  */
 function detectLanguage(text) {
-    // 1. Check for a lang attribute on the content or its ancestors
+    // 1. Check for a lang attribute on the content element itself or its children
+    //    (NOT ancestors — closest('[lang]') would hit <html lang="en"> from the app shell)
     if (contentElement) {
-        const langEl = contentElement.closest('[lang]');
         const langAttr = contentElement.getAttribute('lang') ||
-                         (langEl && langEl.getAttribute('lang'));
+                         (contentElement.querySelector('[lang]')?.getAttribute('lang'));
         if (langAttr) return langAttr.split('-')[0].toLowerCase();
     }
 

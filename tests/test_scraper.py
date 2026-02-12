@@ -236,30 +236,40 @@ class TestMsnApi:
 class TestExtractContent:
     def test_extracts_title(self):
         html = '<html><head><title>My Title</title></head><body><p>Text</p></body></html>'
-        content, title = extract_text_and_nav_from_html(html)
+        content, title, lang = extract_text_and_nav_from_html(html)
         assert title == 'My Title'
 
     def test_extracts_article_content(self):
         html = '<html><body><article><p>Article text here</p></article></body></html>'
-        content, _ = extract_text_and_nav_from_html(html)
+        content, _, _ = extract_text_and_nav_from_html(html)
         assert 'Article text here' in content
 
     def test_strips_scripts(self):
         html = '<html><body><script>alert("x")</script><p>Real content</p></body></html>'
-        content, _ = extract_text_and_nav_from_html(html)
+        content, _, _ = extract_text_and_nav_from_html(html)
         assert 'alert' not in content
         assert 'Real content' in content
 
     def test_strips_nav_elements(self):
         html = '<html><body><nav>Navigation</nav><p>Real content</p></body></html>'
-        content, _ = extract_text_and_nav_from_html(html)
+        content, _, _ = extract_text_and_nav_from_html(html)
         assert 'Navigation' not in content
         assert 'Real content' in content
 
     def test_fallback_title_from_content(self):
         html = '<html><body><p>First paragraph</p></body></html>'
-        _, title = extract_text_and_nav_from_html(html)
+        _, title, _ = extract_text_and_nav_from_html(html)
         assert title == 'First paragraph'
+
+    def test_extracts_lang_attribute(self):
+        html = '<html lang="zh"><head><title>Chinese</title></head><body><p>Content</p></body></html>'
+        _, _, lang = extract_text_and_nav_from_html(html)
+        assert lang == 'zh'
+
+    def test_empty_lang_when_missing(self):
+        html = '<html><head><title>No Lang</title></head><body><p>Content</p></body></html>'
+        _, _, lang = extract_text_and_nav_from_html(html)
+        assert lang == ''
 
 
 # ---------------------------------------------------------------------------
