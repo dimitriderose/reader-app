@@ -311,13 +311,20 @@ function playAudio() {
     }
 
     // Extract sentences if needed
+    let freshExtraction = false;
     if (sentences.length === 0) {
         sentences = extractSentences(contentElement);
         if (sentences.length === 0) return;
+        freshExtraction = true;
     }
 
     // Rebuild range data for fresh start (DOM may have changed from highlight cleanup)
     sentenceRangeData = buildSentenceRanges(contentElement, sentences);
+
+    // Auto-detect language and select matching voice for new articles
+    if (freshExtraction) {
+        autoDetectVoice();
+    }
 
     // Start from the first sentence visible on the current page
     currentSentenceIndex = findFirstVisibleSentenceIndex();
@@ -397,6 +404,112 @@ function cycleSpeed() {
         clearHighlights();
         speakSentence(currentSentenceIndex);
     }
+}
+
+// ==========================================
+// LANGUAGE DETECTION
+// ==========================================
+
+/**
+ * Detect the language of text content.
+ * Checks the content element's lang attribute first, then character sets,
+ * then falls back to common-word frequency for Latin-script languages.
+ * Returns a BCP-47 primary language subtag (e.g. 'en', 'fr', 'ja').
+ */
+function detectLanguage(text) {
+    // 1. Check for a lang attribute on the content or its ancestors
+    if (contentElement) {
+        const langEl = contentElement.closest('[lang]');
+        const langAttr = contentElement.getAttribute('lang') ||
+                         (langEl && langEl.getAttribute('lang'));
+        if (langAttr) return langAttr.split('-')[0].toLowerCase();
+    }
+
+    const sample = text.substring(0, 2000);
+
+    // 2. Non-Latin script detection via character ranges
+    const cjk      = (sample.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+    const hiragana  = (sample.match(/[\u3040-\u309f]/g) || []).length;
+    const katakana  = (sample.match(/[\u30a0-\u30ff]/g) || []).length;
+    const hangul    = (sample.match(/[\uac00-\ud7af\u1100-\u11ff]/g) || []).length;
+    const cyrillic  = (sample.match(/[\u0400-\u04ff]/g) || []).length;
+    const arabic    = (sample.match(/[\u0600-\u06ff]/g) || []).length;
+    const hebrew    = (sample.match(/[\u0590-\u05ff]/g) || []).length;
+    const thai      = (sample.match(/[\u0e00-\u0e7f]/g) || []).length;
+    const devnagari = (sample.match(/[\u0900-\u097f]/g) || []).length;
+    const greek     = (sample.match(/[\u0370-\u03ff]/g) || []).length;
+
+    if (hiragana + katakana > 5) return 'ja';
+    if (hangul > 5)              return 'ko';
+    if (cjk > 10)               return 'zh';
+    if (arabic > 10)            return 'ar';
+    if (hebrew > 10)            return 'he';
+    if (thai > 10)              return 'th';
+    if (devnagari > 10)         return 'hi';
+    if (greek > 10)             return 'el';
+    if (cyrillic > 10)          return 'ru';
+
+    // 3. Latin-script languages — score by common function words
+    const words = sample.toLowerCase().split(/\s+/);
+
+    const markers = {
+        en: ['the','a','an','is','are','was','were','of','to','and','that','it','for','with','have','has','from','this','which','not','but','they','been','would','there'],
+        fr: ['le','la','les','de','des','du','un','une','est','et','en','que','qui','dans','pour','sur','avec','ce','sont','pas','plus','nous','vous','cette','aussi'],
+        es: ['el','la','los','las','del','en','un','una','es','que','por','con','para','se','su','al','como','más','pero','esta','este','fue','son','hay'],
+        de: ['der','die','das','den','dem','ein','eine','und','ist','von','zu','mit','auf','für','nicht','sich','des','auch','nach','noch','wie','über','wird','bei'],
+        pt: ['o','os','as','de','do','da','em','um','uma','que','no','na','com','para','por','se','mais','foi','como','mas','ao','dos','das','seu','sua'],
+        it: ['il','lo','gli','della','dello','un','una','che','di','in','per','con','non','si','da','anche','sono','più','suo','sua','come','questa','questo','stato'],
+        nl: ['het','een','van','en','in','dat','op','te','voor','met','zijn','er','aan','niet','ook','maar','wordt','door','nog','bij','uit','wel','kan','alle'],
+        tr: ['bir','ve','bu','ile','için','olan','den','da','de','ne','var','gibi','daha','ancak','kadar','sonra','çok','ise','ya','hem','olarak','üzerinde'],
+        pl: ['nie','jest','się','na','to','co','jak','ale','za','od','tak','czy','tego','ich','tylko','gdy','przez','już','aby','może','pod','po','ze','lub'],
+        sv: ['och','att','det','en','som','för','med','den','har','av','är','på','till','inte','kan','om','ett','men','var','vid','från','ska','också','hon'],
+    };
+
+    let bestLang = 'en';
+    let bestScore = 0;
+
+    for (const [lang, langWords] of Object.entries(markers)) {
+        let score = 0;
+        for (const w of words) {
+            if (langWords.includes(w)) score++;
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestLang = lang;
+        }
+    }
+
+    return bestLang;
+}
+
+/**
+ * Find the best available voice for a given language code.
+ */
+function selectVoiceForLanguage(langCode) {
+    const voices = speechSynthesis.getVoices();
+    if (voices.length === 0) return null;
+
+    const lc = langCode.toLowerCase();
+
+    // Exact prefix match (e.g. 'fr' → 'fr-FR')
+    return voices.find(v => v.lang.toLowerCase().startsWith(lc + '-')) ||
+           voices.find(v => v.lang.toLowerCase() === lc) ||
+           null;
+}
+
+/**
+ * Auto-detect the article language and switch the voice to match.
+ * Only overrides if a matching voice is found; user can still override manually.
+ */
+function autoDetectVoice() {
+    if (sentences.length === 0) return;
+
+    const langCode = detectLanguage(sentences.join(' '));
+    const voice = selectVoiceForLanguage(langCode);
+    if (!voice) return;
+
+    selectedVoice = voice;
+    if (voiceSelect) voiceSelect.value = voice.voiceURI;
 }
 
 // ==========================================
