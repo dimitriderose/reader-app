@@ -1,10 +1,39 @@
+import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, unquote
 
 import requests
 from bs4 import BeautifulSoup
 
 from .word_count import count_words
+
+logger = logging.getLogger(__name__)
+
+_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/120.0.0.0 Safari/537.36'
+    ),
+    'Accept': (
+        'text/html,application/xhtml+xml,application/xml;'
+        'q=0.9,image/webp,*/*;q=0.8'
+    ),
+    'Accept-Language': 'en-US,en;q=0.9',
+}
+
+
+def _clean_url(url: str) -> str:
+    """Unwrap browser reader-mode URLs to the real HTTP URL inside.
+
+    Edge wraps URLs as: read://https_example.com/?url=<encoded_real_url>
+    """
+    if url.startswith('read://'):
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        if 'url' in qs:
+            return unquote(qs['url'][0])
+    return url
 
 
 def extract_domain(url: str) -> str:
@@ -14,6 +43,44 @@ def extract_domain(url: str) -> str:
         return hostname.replace('www.', '')
     except Exception:
         return ''
+
+
+_MSN_ARTICLE_RE = re.compile(r'msn\.com/([a-z]{2}-[a-z]{2})/.+/ar-([A-Za-z0-9]+)')
+
+
+def _fetch_msn_article(url: str) -> dict | None:
+    """Try MSN's content API for MSN article URLs.
+
+    MSN is a React SPA whose HTML shell contains no article text.
+    Their internal API returns the article body as JSON, which is
+    much faster and more reliable than browser rendering.
+
+    Returns a result dict, or None if not an MSN URL or API fails.
+    """
+    match = _MSN_ARTICLE_RE.search(url)
+    if not match:
+        return None
+    locale, article_id = match.groups()
+    api_url = f'https://assets.msn.com/content/view/v2/Detail/{locale}/{article_id}'
+    try:
+        resp = requests.get(api_url, headers=_HEADERS, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        title = data.get('title', '')
+        body_html = data.get('body', '')
+        if not body_html:
+            return None
+        content_html, fallback_title = extract_text_and_nav_from_html(body_html)
+        return {
+            'title': title or fallback_title,
+            'content_html': content_html,
+            'word_count': count_words(content_html),
+            'source_domain': extract_domain(url),
+            'scrape_method': 'msn_api',
+        }
+    except Exception as e:
+        logger.info('MSN API failed for %s: %s, falling back to default scraper', url, e)
+        return None
 
 
 def extract_text_and_nav_from_html(html: str) -> tuple:
@@ -83,23 +150,22 @@ def extract_text_and_nav_from_html(html: str) -> tuple:
 def fetch_and_parse(url: str) -> dict:
     """Fetch URL, extract readable content.
 
+    Tries MSN content API first for MSN URLs (React SPA that returns
+    empty HTML). Falls back to standard HTTP fetch for everything else.
+
     Returns:
         dict: { title, content_html, word_count, source_domain }
     """
-    headers = {
-        'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/120.0.0.0 Safari/537.36'
-        ),
-        'Accept': (
-            'text/html,application/xhtml+xml,application/xml;'
-            'q=0.9,image/webp,*/*;q=0.8'
-        ),
-        'Accept-Language': 'en-US,en;q=0.9',
-    }
+    # Unwrap browser reader-mode URLs (e.g. Edge read:// protocol)
+    url = _clean_url(url)
 
-    response = requests.get(url, headers=headers, timeout=15)
+    # --- Fast path: MSN content API ---
+    msn_result = _fetch_msn_article(url)
+    if msn_result and msn_result.get('word_count', 0) > 0:
+        return msn_result
+
+    # --- Default: standard HTTP fetch ---
+    response = requests.get(url, headers=_HEADERS, timeout=15)
     response.raise_for_status()
 
     content_html, title = extract_text_and_nav_from_html(response.text)
