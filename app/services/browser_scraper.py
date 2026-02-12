@@ -62,11 +62,15 @@ def fetch_with_cloudscraper(url: str, timeout: int = 20) -> str | None:
         return None
 
 
+_CONTENT_SELECTORS = ['article', 'main', '[role="main"]', '.article-body', '#article-body']
+
+
 def fetch_with_playwright(url: str, timeout: int = 30000) -> str | None:
     """Render a page with headless Chromium via Playwright.
 
     Applies playwright-stealth if available to avoid headless detection.
-    Blocks images/fonts to speed up loading.
+    Blocks images/fonts to speed up loading.  Waits for article content
+    to appear in the DOM before capturing HTML.
 
     Args:
         url: Page URL
@@ -98,8 +102,17 @@ def fetch_with_playwright(url: str, timeout: int = 30000) -> str | None:
 
             page.goto(url, wait_until='networkidle', timeout=timeout)
 
-            # Brief extra wait for late-loading content
-            page.wait_for_timeout(2000)
+            # Wait for an article content container to appear in the DOM
+            for selector in _CONTENT_SELECTORS:
+                try:
+                    page.wait_for_selector(selector, timeout=5000)
+                    logger.debug('Found content selector %s for %s', selector, url)
+                    break
+                except Exception:
+                    continue
+            else:
+                # No known selector found — give late-loading JS extra time
+                page.wait_for_timeout(3000)
 
             html = page.content()
             browser.close()

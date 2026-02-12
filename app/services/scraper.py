@@ -255,9 +255,14 @@ def fetch_and_parse(url: str) -> dict:
         raw_html = fetch_with_playwright(url)
         if raw_html:
             content_html, title = extract_text_and_nav_from_html(raw_html)
-            result = _build_result(title, content_html, url, 'playwright')
-            _set_cached(url, result)
-            return result
+            if not _is_thin_content(content_html):
+                result = _build_result(title, content_html, url, 'playwright')
+                _set_cached(url, result)
+                return result
+            else:
+                logger.info('Thin content from Playwright for %s, using best effort', url)
+                last_html = raw_html
+                last_method = 'playwright'
 
     # --- Best effort: return whatever we got, even if thin ---
     if last_html is not None:
