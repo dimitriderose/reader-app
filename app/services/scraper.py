@@ -11,7 +11,7 @@ extract_text_and_nav_from_html() function.
 import logging
 import re
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, unquote
 
 import requests
 from bs4 import BeautifulSoup
@@ -79,6 +79,19 @@ class ScrapeError(Exception):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _clean_url(url: str) -> str:
+    """Unwrap browser reader-mode URLs to the real HTTP URL inside.
+
+    Edge wraps URLs as: read://https_example.com/?url=<encoded_real_url>
+    """
+    if url.startswith('read://'):
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        if 'url' in qs:
+            return unquote(qs['url'][0])
+    return url
+
 
 def extract_domain(url: str) -> str:
     """Extract domain from URL (e.g., 'nytimes.com')."""
@@ -191,6 +204,9 @@ def fetch_and_parse(url: str) -> dict:
     Returns:
         dict with: title, content_html, word_count, source_domain, scrape_method
     """
+    # Unwrap browser reader-mode URLs (e.g. Edge read:// protocol)
+    url = _clean_url(url)
+
     # Check cache
     cached = _get_cached(url)
     if cached is not None:

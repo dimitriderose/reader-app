@@ -9,6 +9,7 @@ from app.services.scraper import (
     extract_text_and_nav_from_html,
     _is_thin_content,
     _is_cloudflare_challenge,
+    _clean_url,
     _build_result,
     _scrape_cache,
     ScrapeError,
@@ -90,6 +91,27 @@ class TestCloudflareDetection:
 
     def test_empty_not_detected(self):
         assert _is_cloudflare_challenge('') is False
+
+
+# ---------------------------------------------------------------------------
+# _clean_url
+# ---------------------------------------------------------------------------
+
+class TestCleanUrl:
+    def test_unwraps_edge_reader_url(self):
+        edge_url = (
+            'read://https_www.msn.com/?url=https%3A%2F%2Fwww.msn.com'
+            '%2Fen-us%2Fnews%2Farticle%2Far-AA1W6rzz'
+        )
+        assert _clean_url(edge_url) == 'https://www.msn.com/en-us/news/article/ar-AA1W6rzz'
+
+    def test_passes_normal_url_through(self):
+        url = 'https://example.com/article'
+        assert _clean_url(url) == url
+
+    def test_passes_http_url_through(self):
+        url = 'http://example.com/page'
+        assert _clean_url(url) == url
 
 
 # ---------------------------------------------------------------------------
