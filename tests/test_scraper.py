@@ -163,7 +163,7 @@ class TestFallbackChain:
         """When requests returns good content, no fallback is needed."""
         mock_resp = MagicMock()
         mock_resp.text = _make_article_html(100, 'Good Article')
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         result = fetch_and_parse('https://example.com/article')
@@ -180,7 +180,7 @@ class TestFallbackChain:
         """Thin content with no fallbacks available still returns what we have."""
         mock_resp = MagicMock()
         mock_resp.text = _make_thin_html()
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         result = fetch_and_parse('https://example.com/spa')
@@ -210,7 +210,7 @@ class TestFallbackChain:
         # requests returns thin content
         mock_resp = MagicMock()
         mock_resp.text = _make_thin_html()
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         # cloudscraper returns good content
@@ -231,7 +231,7 @@ class TestFallbackChain:
         # requests: thin
         mock_resp = MagicMock()
         mock_resp.text = _make_thin_html()
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         # cloudscraper: also thin
@@ -250,7 +250,7 @@ class TestFallbackChain:
         """Cloudflare challenge page triggers escalation, returns best-effort if no fallbacks."""
         mock_resp = MagicMock()
         mock_resp.text = _cloudflare_html()
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         with patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', False), \
@@ -268,7 +268,7 @@ class TestFallbackChain:
         # requests returns thin content (JS shell)
         mock_resp = MagicMock()
         mock_resp.text = _make_thin_html()
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         # cloudscraper returns good content
@@ -279,12 +279,61 @@ class TestFallbackChain:
         mock_get.assert_called_once()  # requests was tried first
         assert result['scrape_method'] == 'cloudscraper'
 
+    @patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', False)
+    @patch('app.services.scraper.PLAYWRIGHT_AVAILABLE', False)
+    @patch('app.services.scraper.requests.get')
+    def test_http_403_with_content_returns_best_effort(self, mock_get):
+        """HTTP 403 with real content in the body returns best-effort instead of error."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.text = _make_article_html(100, 'Blocked But Has Content')
+        mock_get.return_value = mock_resp
+
+        result = fetch_and_parse('https://celebrity-site.com/article')
+
+        assert result['scrape_method'] == 'requests'
+        assert result['word_count'] >= 50
+        assert result['title'] == 'Blocked But Has Content'
+
+    @patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', False)
+    @patch('app.services.scraper.PLAYWRIGHT_AVAILABLE', False)
+    @patch('app.services.scraper.requests.get')
+    def test_http_403_with_thin_content_returns_best_effort(self, mock_get):
+        """HTTP 403 with thin content still returns best-effort rather than ScrapeError."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.text = _make_thin_html()
+        mock_get.return_value = mock_resp
+
+        result = fetch_and_parse('https://celebrity-site.com/blocked')
+
+        # Thin but still returned as best-effort (not a ScrapeError)
+        assert result['scrape_method'] == 'requests'
+
+    @patch('app.services.scraper.fetch_with_cloudscraper')
+    @patch('app.services.scraper.CLOUDSCRAPER_AVAILABLE', True)
+    @patch('app.services.scraper.PLAYWRIGHT_AVAILABLE', False)
+    @patch('app.services.scraper.requests.get')
+    def test_http_403_escalates_to_cloudscraper(self, mock_get, mock_cs):
+        """HTTP 403 triggers escalation to cloudscraper which gets real content."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 403
+        mock_resp.text = _make_thin_html()
+        mock_get.return_value = mock_resp
+
+        mock_cs.return_value = _make_article_html(100, 'Full Article via CS')
+
+        result = fetch_and_parse('https://celebrity-site.com/article')
+
+        assert result['scrape_method'] == 'cloudscraper'
+        assert result['word_count'] >= 50
+
     @patch('app.services.scraper.requests.get')
     def test_cache_hit_skips_fetch(self, mock_get):
         """Second call for same URL returns cached result."""
         mock_resp = MagicMock()
         mock_resp.text = _make_article_html(100, 'Cached')
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.status_code = 200
         mock_get.return_value = mock_resp
 
         result1 = fetch_and_parse('https://example.com/cached')

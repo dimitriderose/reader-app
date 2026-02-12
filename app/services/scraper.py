@@ -197,17 +197,25 @@ def fetch_and_parse(url: str) -> dict:
         return cached
 
     last_html = None
+    last_method = 'requests'
     needs_escalation = False
     error_detail = None
 
     # --- Layer 1: requests (always tried first) ---
     try:
         response = requests.get(url, headers=_HEADERS, timeout=15)
-        response.raise_for_status()
         raw_html = response.text
 
         if _is_cloudflare_challenge(raw_html):
             logger.info('Cloudflare challenge for %s, escalating', url)
+            last_html = raw_html
+            needs_escalation = True
+        elif response.status_code >= 400:
+            # Error status, but the body might still have extractable content
+            logger.info(
+                'HTTP %d for %s, checking body before escalating',
+                response.status_code, url,
+            )
             last_html = raw_html
             needs_escalation = True
         else:
@@ -240,6 +248,7 @@ def fetch_and_parse(url: str) -> dict:
             else:
                 logger.info('Thin content from cloudscraper for %s, escalating', url)
                 last_html = raw_html
+                last_method = 'cloudscraper'
 
     # --- Layer 3: Playwright (only if prior layers failed or returned bad content) ---
     if needs_escalation and PLAYWRIGHT_AVAILABLE:
@@ -253,7 +262,7 @@ def fetch_and_parse(url: str) -> dict:
     # --- Best effort: return whatever we got, even if thin ---
     if last_html is not None:
         content_html, title = extract_text_and_nav_from_html(last_html)
-        result = _build_result(title, content_html, url, 'requests')
+        result = _build_result(title, content_html, url, last_method)
         _set_cached(url, result)
         return result
 
