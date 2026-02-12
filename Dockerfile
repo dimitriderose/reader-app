@@ -28,11 +28,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright Chromium browser (must run as root, before USER switch)
+# Install Playwright Chromium browser to a shared path accessible by non-root user
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
 RUN playwright install chromium
 
-# Create non-root user
-RUN addgroup --system app && adduser --system --ingroup app app
+# Create non-root user and grant read access to Playwright browsers
+RUN addgroup --system app && adduser --system --ingroup app app \
+    && chmod -R o+rx /opt/pw-browsers
 
 # Copy application code
 COPY app/ app/
