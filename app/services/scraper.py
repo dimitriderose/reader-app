@@ -102,6 +102,38 @@ def extract_domain(url: str) -> str:
         return ''
 
 
+_MSN_ARTICLE_RE = re.compile(r'msn\.com/([a-z]{2}-[a-z]{2})/.+/ar-([A-Za-z0-9]+)')
+
+
+def _fetch_msn_article(url: str) -> dict | None:
+    """Try MSN's content API for MSN article URLs.
+
+    MSN is a React SPA whose HTML shell contains no article text.
+    Their internal API returns the article body as JSON, which is
+    much faster and more reliable than browser rendering.
+
+    Returns a result dict, or None if not an MSN URL or API fails.
+    """
+    match = _MSN_ARTICLE_RE.search(url)
+    if not match:
+        return None
+    locale, article_id = match.groups()
+    api_url = f'https://assets.msn.com/content/view/v2/Detail/{locale}/{article_id}'
+    try:
+        resp = requests.get(api_url, headers=_HEADERS, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        title = data.get('title', '')
+        body_html = data.get('body', '')
+        if not body_html:
+            return None
+        content_html, fallback_title = extract_text_and_nav_from_html(body_html)
+        return _build_result(title or fallback_title, content_html, url, 'msn_api')
+    except Exception as e:
+        logger.info('MSN API failed for %s: %s, falling back to scraper chain', url, e)
+        return None
+
+
 def extract_text_and_nav_from_html(html: str) -> tuple:
     """Extract readable content from raw HTML.
 
@@ -199,7 +231,7 @@ def _build_result(title, content_html, url, method):
 def fetch_and_parse(url: str) -> dict:
     """Fetch a URL with fallback chain, extract readable content.
 
-    Chain: requests → cloudscraper → Playwright
+    Chain: MSN API (if applicable) → requests → cloudscraper → Playwright
 
     Returns:
         dict with: title, content_html, word_count, source_domain, scrape_method
@@ -211,6 +243,12 @@ def fetch_and_parse(url: str) -> dict:
     cached = _get_cached(url)
     if cached is not None:
         return cached
+
+    # --- Fast path: MSN content API (avoids 30s Playwright timeout) ---
+    msn_result = _fetch_msn_article(url)
+    if msn_result and not _is_thin_content(msn_result['content_html']):
+        _set_cached(url, msn_result)
+        return msn_result
 
     last_html = None
     last_method = 'requests'

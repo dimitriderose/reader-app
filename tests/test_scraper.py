@@ -10,6 +10,8 @@ from app.services.scraper import (
     _is_thin_content,
     _is_cloudflare_challenge,
     _clean_url,
+    _fetch_msn_article,
+    _MSN_ARTICLE_RE,
     _build_result,
     _scrape_cache,
     ScrapeError,
@@ -112,6 +114,119 @@ class TestCleanUrl:
     def test_passes_http_url_through(self):
         url = 'http://example.com/page'
         assert _clean_url(url) == url
+
+
+# ---------------------------------------------------------------------------
+# _fetch_msn_article / MSN content API
+# ---------------------------------------------------------------------------
+
+class TestMsnApi:
+    def test_regex_extracts_locale_and_id(self):
+        """Regex correctly parses locale and article ID from MSN URLs."""
+        url = 'https://www.msn.com/en-us/news/technology/some-article/ar-AA1VZ8we?ocid=foo'
+        match = _MSN_ARTICLE_RE.search(url)
+        assert match is not None
+        assert match.group(1) == 'en-us'
+        assert match.group(2) == 'AA1VZ8we'
+
+    def test_regex_various_locales(self):
+        url = 'https://www.msn.com/fr-fr/actualite/monde/some-slug/ar-BB2xYz99'
+        match = _MSN_ARTICLE_RE.search(url)
+        assert match is not None
+        assert match.group(1) == 'fr-fr'
+        assert match.group(2) == 'BB2xYz99'
+
+    def test_non_msn_url_returns_none(self):
+        assert _fetch_msn_article('https://example.com/article') is None
+        assert _fetch_msn_article('https://cnn.com/news/story') is None
+
+    @patch('app.services.scraper.requests.get')
+    def test_msn_article_url_uses_api(self, mock_get):
+        """MSN URL triggers API call and returns msn_api scrape method."""
+        words = ' '.join(['word'] * 100)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            'title': 'Test MSN Article',
+            'body': f'<p>{words}</p>',
+        }
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        result = _fetch_msn_article(
+            'https://www.msn.com/en-us/news/tech/some-slug/ar-AA1VZ8we'
+        )
+
+        assert result is not None
+        assert result['scrape_method'] == 'msn_api'
+        assert result['title'] == 'Test MSN Article'
+        assert result['word_count'] >= 50
+        mock_get.assert_called_once()
+        call_url = mock_get.call_args[0][0]
+        assert 'assets.msn.com' in call_url
+        assert 'AA1VZ8we' in call_url
+
+    @patch('app.services.scraper.requests.get')
+    def test_msn_api_failure_returns_none(self, mock_get):
+        """When MSN API fails, returns None so scraper chain can run."""
+        mock_get.side_effect = Exception('API down')
+
+        result = _fetch_msn_article(
+            'https://www.msn.com/en-us/news/tech/some-slug/ar-AA1VZ8we'
+        )
+        assert result is None
+
+    @patch('app.services.scraper.requests.get')
+    def test_msn_api_empty_body_returns_none(self, mock_get):
+        """When MSN API returns no body, returns None."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {'title': 'Title', 'body': ''}
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+
+        result = _fetch_msn_article(
+            'https://www.msn.com/en-us/news/tech/some-slug/ar-AA1VZ8we'
+        )
+        assert result is None
+
+    @patch('app.services.scraper._fetch_msn_article')
+    @patch('app.services.scraper.requests.get')
+    def test_fetch_and_parse_uses_msn_api(self, mock_get, mock_msn):
+        """fetch_and_parse tries MSN API before the scraper chain."""
+        words = ' '.join(['word'] * 100)
+        mock_msn.return_value = {
+            'title': 'MSN Article',
+            'content_html': f'<p>{words}</p>',
+            'word_count': 100,
+            'source_domain': 'msn.com',
+            'scrape_method': 'msn_api',
+        }
+
+        result = fetch_and_parse(
+            'https://www.msn.com/en-us/news/tech/slug/ar-AA1VZ8we'
+        )
+
+        assert result['scrape_method'] == 'msn_api'
+        mock_get.assert_not_called()  # scraper chain never reached
+
+    @patch('app.services.scraper._fetch_msn_article')
+    @patch('app.services.scraper.requests.get')
+    def test_msn_api_failure_falls_back_to_chain(self, mock_get, mock_msn):
+        """When MSN API returns None, fetch_and_parse falls through to scraper chain."""
+        mock_msn.return_value = None
+
+        mock_resp = MagicMock()
+        mock_resp.text = _make_article_html(100, 'Chain Article')
+        mock_resp.status_code = 200
+        mock_get.return_value = mock_resp
+
+        result = fetch_and_parse(
+            'https://www.msn.com/en-us/news/tech/slug/ar-AA1VZ8we'
+        )
+
+        assert result['scrape_method'] == 'requests'
+        mock_get.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
