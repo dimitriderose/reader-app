@@ -87,6 +87,11 @@
                 <button class="tb-toggle" id="fontToggle">Serif</button>
             </div>
             <div class="tb-divider"></div>
+            <button class="listen-btn" id="listenBtn" title="Listen to article">
+                <span class="listen-icon">&#9654;</span>
+                <span class="listen-label">Listen</span>
+            </button>
+            <div class="tb-divider"></div>
             <button class="save-btn" id="saveBtn" title="Save to library">
                 <span class="save-icon">&#9734;</span>
                 <span class="save-label">Save</span>
@@ -117,6 +122,35 @@
                 </div>
             </div>
             <div></div>
+        </div>
+
+        <div class="audio-bar" id="audioBar">
+            <div class="audio-progress">
+                <div class="audio-progress-fill" id="audioProgressFill"></div>
+            </div>
+            <div class="audio-controls">
+                <div class="audio-controls-left">
+                    <button class="audio-btn" id="audioSkipBwd" title="Previous sentence" aria-label="Previous sentence">
+                        <span class="audio-btn-icon">&#9664;&#9664;</span>
+                    </button>
+                    <button class="audio-btn audio-btn-play" id="audioPlayPause" title="Play" aria-label="Play audio">
+                        <span class="audio-btn-icon">&#9654;</span>
+                    </button>
+                    <button class="audio-btn" id="audioSkipFwd" title="Next sentence" aria-label="Next sentence">
+                        <span class="audio-btn-icon">&#9654;&#9654;</span>
+                    </button>
+                    <button class="audio-btn audio-btn-stop" id="audioStop" title="Stop" aria-label="Stop audio">
+                        <span class="audio-btn-icon">&#9632;</span>
+                    </button>
+                </div>
+                <div class="audio-controls-center">
+                    <span class="audio-sentence-info" id="audioSentenceInfo"></span>
+                </div>
+                <div class="audio-controls-right">
+                    <button class="audio-speed-btn" id="audioSpeed" title="Playback speed">1x</button>
+                    <select class="audio-voice-select" id="audioVoice" title="Choose voice" aria-label="Choose voice"></select>
+                </div>
+            </div>
         </div>
 
         <div class="page-progress">

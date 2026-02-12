@@ -840,3 +840,213 @@ textarea.text-input {
 @media (max-width: 400px) {
     .reader-toolbar { gap: 6px; flex-wrap: wrap; height: auto; min-height: var(--toolbar-h); padding: 6px 12px; }
 }
+
+/* ----------------------------------------
+   LISTEN BUTTON (toolbar)
+   ---------------------------------------- */
+.listen-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.listen-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.listen-icon {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+/* ----------------------------------------
+   AUDIO PLAYER BAR
+   ---------------------------------------- */
+.audio-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    transform: translateY(100%);
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: transform 0.3s ease, max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.audio-bar.visible {
+    transform: translateY(0);
+    max-height: 120px;
+    opacity: 1;
+}
+
+.audio-progress {
+    height: 3px;
+    background: var(--border);
+    width: 100%;
+}
+
+.audio-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.audio-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    gap: 12px;
+}
+
+.audio-controls-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.audio-controls-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.audio-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audio-btn {
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 0.65rem;
+}
+
+.audio-btn:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
+}
+
+.audio-btn-play {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-size: 0.8rem;
+}
+
+.audio-btn-play:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.audio-btn-stop {
+    font-size: 0.7rem;
+}
+
+.audio-btn-icon {
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audio-sentence-info {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.audio-speed-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.audio-speed-btn:hover {
+    border-color: var(--accent);
+}
+
+.audio-voice-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    max-width: 150px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.audio-voice-select:hover,
+.audio-voice-select:focus {
+    border-color: var(--accent);
+}
+
+/* Sentence highlight */
+mark.audio-highlight {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: inherit;
+    border-radius: 2px;
+    padding: 1px 0;
+}
+
+[data-theme="dark"] mark.audio-highlight {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+[data-theme="sepia"] mark.audio-highlight {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ----------------------------------------
+   AUDIO RESPONSIVE
+   ---------------------------------------- */
+@media (max-width: 640px) {
+    .audio-controls { padding: 6px 12px; gap: 8px; }
+    .audio-voice-select { max-width: 100px; }
+    .listen-btn span:not(.listen-icon) { display: none; }
+    .listen-btn { padding: 5px 10px; }
+}
+
+@media (max-width: 400px) {
+    .audio-voice-select { display: none; }
+    .audio-controls-right { gap: 4px; }
+}

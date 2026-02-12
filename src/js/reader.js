@@ -11,6 +11,7 @@ import { openAuthModal } from './auth.js';
 import { showToast } from './toast.js';
 import { applyTheme } from './theme.js';
 import { marked } from 'marked';
+import { initAudioReader, setAudioContent, cleanupAudio } from './audio-reader.js';
 
 // Configure marked for clean output
 marked.setOptions({
@@ -887,6 +888,7 @@ function showInput() {
     clearTimeout(positionTimer);
     currentHistoryEntryId = null;
     updateSaveButton();
+    cleanupAudio();
 }
 
 // ==========================================
@@ -1233,6 +1235,9 @@ function loadArticle(contentHtml, options = {}) {
     // Set content
     flipContent.innerHTML = contentHtml;
 
+    // Set up audio reader with the new content
+    setAudioContent(flipContent);
+
     // Restore preferences if provided
     if (options.fontSize) {
         fontSize = options.fontSize;
@@ -1426,6 +1431,9 @@ export function initReader() {
     initFileDropZone();
     initUrlFetch();
     initPasteText();
+
+    // Initialize audio reader
+    initAudioReader();
 
     // Initial pagination (for any preloaded content)
     paginate();
