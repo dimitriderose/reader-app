@@ -258,6 +258,45 @@ function speakSentence(index) {
 // PLAYBACK CONTROLS
 // ==========================================
 
+/**
+ * Find the index of the first sentence visible on the current flipbook page.
+ * Uses getBoundingClientRect on text nodes to detect what's in the viewport.
+ */
+function findFirstVisibleSentenceIndex() {
+    if (!contentElement || sentences.length === 0 || !sentenceRangeData) return 0;
+
+    const viewport = contentElement.closest('.flipbook-viewport');
+    if (!viewport) return 0;
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const { textNodes } = sentenceRangeData;
+
+    if (textNodes.length === 0) return 0;
+
+    const totalChars = textNodes[textNodes.length - 1].end;
+    if (totalChars === 0) return 0;
+
+    // Find the first text node whose bounding rect intersects the viewport
+    for (const tn of textNodes) {
+        const range = document.createRange();
+        range.selectNodeContents(tn.node);
+        const rect = range.getBoundingClientRect();
+
+        if (rect.width > 0 && rect.height > 0 &&
+            rect.left < viewportRect.right && rect.right > viewportRect.left &&
+            rect.top < viewportRect.bottom && rect.bottom > viewportRect.top) {
+            // Map text position to approximate sentence index
+            const fraction = tn.start / totalChars;
+            return Math.max(0, Math.min(
+                Math.floor(fraction * sentences.length),
+                sentences.length - 1
+            ));
+        }
+    }
+
+    return 0;
+}
+
 function playAudio() {
     if (!contentElement) return;
 
@@ -271,12 +310,17 @@ function playAudio() {
         return;
     }
 
-    // Fresh start or continue from current position
+    // Extract sentences if needed
     if (sentences.length === 0) {
         sentences = extractSentences(contentElement);
         if (sentences.length === 0) return;
-        sentenceRangeData = buildSentenceRanges(contentElement, sentences);
     }
+
+    // Rebuild range data for fresh start (DOM may have changed from highlight cleanup)
+    sentenceRangeData = buildSentenceRanges(contentElement, sentences);
+
+    // Start from the first sentence visible on the current page
+    currentSentenceIndex = findFirstVisibleSentenceIndex();
 
     isPlaying = true;
     isPaused = false;

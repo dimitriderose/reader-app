@@ -19,6 +19,7 @@ import { initToast, showToast } from './toast.js';
 import { supabase, getSession, getPendingSave } from './supabase.js';
 import { initAuth, openAuthModal } from './auth.js';
 import { initReader } from './reader.js';
+import { cleanupAudio } from './audio-reader.js';
 import { api } from './api.js';
 
 // ==========================================
@@ -56,6 +57,11 @@ function showView(name) {
             el.classList.add('hidden');
         }
     });
+
+    // Stop audio playback when navigating away from the reader
+    if (name !== 'reader') {
+        cleanupAudio();
+    }
 
     // Update nav link active state
     document.querySelectorAll('.nav-link').forEach(link => {
