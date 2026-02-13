@@ -320,6 +320,16 @@ let touchStartY = 0;
 // Resize debounce
 let resizeTimeout = null;
 
+// Bookmarks
+let currentBookmarks = [];
+let bookmarkToggle = null;
+let bookmarkIcon = null;
+let bookmarksSidebar = null;
+let bookmarksList = null;
+let bookmarksEmpty = null;
+let bookmarkSearchInput = null;
+let bkSidebarResizing = false;
+
 // Cache the access token so it's available synchronously in beforeunload
 async function refreshCachedToken() {
     const session = await getSession();
@@ -557,6 +567,7 @@ function updateUI() {
         progressFill.style.width =
             totalPages > 1 ? ((currentPage / (totalPages - 1)) * 100) + '%' : '100%';
     }
+    updateBookmarkButton();
 }
 
 function updateBoundaries() {
@@ -600,11 +611,240 @@ function flipTo(page) {
     updatePosition(true);
     updateUI();
     updateBoundaries();
+    updateBookmarkButton();
 
     // Position auto-save on flip
     onPageFlip();
 
     setTimeout(() => { isFlipping = false; }, 530);
+}
+
+// ==========================================
+// BOOKMARKS
+// ==========================================
+
+function simpleHash(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
+    }
+    return hash.toString(36);
+}
+
+function getBookmarkStorageKey() {
+    if (currentArticleId) return 'reader-bookmarks-' + currentArticleId;
+    if (currentContentHtml) {
+        return 'reader-bookmarks-hash-' + simpleHash(currentContentHtml.substring(0, 500));
+    }
+    return null;
+}
+
+function persistBookmarks() {
+    const key = getBookmarkStorageKey();
+    if (key) {
+        try {
+            localStorage.setItem(key, JSON.stringify(currentBookmarks));
+        } catch { /* quota exceeded */ }
+    }
+}
+
+function loadBookmarks() {
+    const key = getBookmarkStorageKey();
+    if (!key) { currentBookmarks = []; return; }
+    try {
+        currentBookmarks = JSON.parse(localStorage.getItem(key)) || [];
+    } catch {
+        currentBookmarks = [];
+    }
+    updateBookmarkButton();
+    renderBookmarksList();
+}
+
+function isCurrentPageBookmarked() {
+    return currentBookmarks.some(b => b.page_number === currentPage + 1);
+}
+
+function updateBookmarkButton() {
+    if (!bookmarkToggle || !bookmarkIcon) return;
+    if (isCurrentPageBookmarked()) {
+        bookmarkToggle.classList.add('active');
+        bookmarkIcon.innerHTML = '&#9873;'; // filled flag
+    } else {
+        bookmarkToggle.classList.remove('active');
+        bookmarkIcon.innerHTML = '&#9872;'; // outline flag
+    }
+
+    const countEl = document.getElementById('bookmarkCount');
+    if (countEl) {
+        if (currentBookmarks.length > 0) {
+            countEl.textContent = currentBookmarks.length;
+            countEl.classList.add('visible');
+        } else {
+            countEl.classList.remove('visible');
+        }
+    }
+}
+
+function toggleBookmark() {
+    const pageNum = currentPage + 1;
+    const existing = currentBookmarks.find(b => b.page_number === pageNum);
+
+    if (existing) {
+        currentBookmarks = currentBookmarks.filter(b => b.id !== existing.id);
+        showToast('Bookmark removed', 'info');
+    } else {
+        currentBookmarks.push({
+            id: 'bk-' + Date.now(),
+            page_number: pageNum,
+            label: null,
+            created_at: new Date().toISOString(),
+        });
+        showToast('Page ' + pageNum + ' bookmarked', 'success');
+    }
+
+    persistBookmarks();
+    updateBookmarkButton();
+    renderBookmarksList();
+}
+
+function renderBookmarksList() {
+    if (!bookmarksList || !bookmarksEmpty) return;
+    bookmarksList.innerHTML = '';
+
+    const query = bookmarkSearchInput ? bookmarkSearchInput.value.trim().toLowerCase() : '';
+
+    const sorted = [...currentBookmarks].sort((a, b) => a.page_number - b.page_number);
+
+    const filtered = query
+        ? sorted.filter(bk => {
+            const pageTxt = 'page ' + bk.page_number;
+            const label = (bk.label || '').toLowerCase();
+            return pageTxt.includes(query) || label.includes(query);
+        })
+        : sorted;
+
+    if (filtered.length === 0) {
+        bookmarksEmpty.style.display = 'block';
+        bookmarksEmpty.textContent = query ? 'No matching bookmarks' : 'No bookmarks yet';
+        return;
+    }
+    bookmarksEmpty.style.display = 'none';
+
+    for (const bk of filtered) {
+        const item = document.createElement('div');
+        item.className = 'bookmark-item';
+        if (bk.page_number === currentPage + 1) item.classList.add('current-page');
+
+        const info = document.createElement('div');
+        info.className = 'bookmark-item-info';
+
+        const pageSpan = document.createElement('span');
+        pageSpan.className = 'bookmark-item-page';
+        pageSpan.textContent = 'Page ' + bk.page_number + ' of ' + totalPages;
+        info.appendChild(pageSpan);
+
+        if (bk.label) {
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'bookmark-item-label';
+            labelSpan.textContent = bk.label;
+            info.appendChild(labelSpan);
+        }
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'bookmark-item-date';
+        dateSpan.textContent = formatBookmarkDate(bk.created_at);
+        info.appendChild(dateSpan);
+
+        item.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'bookmark-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'bookmark-item-action';
+        editBtn.textContent = bk.label ? 'Edit' : 'Label';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newLabel = prompt('Bookmark label:', bk.label || '');
+            if (newLabel !== null) {
+                bk.label = newLabel.trim() || null;
+                persistBookmarks();
+                renderBookmarksList();
+            }
+        });
+        actions.appendChild(editBtn);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'bookmark-item-action delete';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentBookmarks = currentBookmarks.filter(b => b.id !== bk.id);
+            persistBookmarks();
+            updateBookmarkButton();
+            renderBookmarksList();
+        });
+        actions.appendChild(removeBtn);
+
+        item.appendChild(actions);
+
+        item.addEventListener('click', () => {
+            flipTo(bk.page_number - 1);
+        });
+
+        bookmarksList.appendChild(item);
+    }
+}
+
+function formatBookmarkDate(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function toggleBookmarksSidebar() {
+    if (!bookmarksSidebar) return;
+    bookmarksSidebar.classList.toggle('visible');
+    if (bookmarksSidebar.classList.contains('visible')) {
+        renderBookmarksList();
+    }
+}
+
+function initBookmarkSidebarResize() {
+    const handle = document.getElementById('bkSidebarResize');
+    if (!handle || !bookmarksSidebar) return;
+
+    let startX = 0;
+    let startWidth = 0;
+
+    function onMouseMove(e) {
+        if (!bkSidebarResizing) return;
+        const newWidth = Math.max(200, Math.min(600, startWidth + (e.clientX - startX)));
+        bookmarksSidebar.style.width = newWidth + 'px';
+    }
+
+    function onMouseUp() {
+        if (!bkSidebarResizing) return;
+        bkSidebarResizing = false;
+        handle.classList.remove('active');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        bkSidebarResizing = true;
+        startX = e.clientX;
+        startWidth = bookmarksSidebar.offsetWidth;
+        handle.classList.add('active');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
 }
 
 function flipNext() { flipTo(currentPage + 1); }
@@ -887,7 +1127,11 @@ function showInput() {
     positionDirty = false;
     clearTimeout(positionTimer);
     currentHistoryEntryId = null;
+    currentBookmarks = [];
     updateSaveButton();
+    updateBookmarkButton();
+    if (bookmarksSidebar) bookmarksSidebar.classList.remove('visible');
+    if (bookmarksList) bookmarksList.innerHTML = '';
     cleanupAudio();
 }
 
@@ -1181,6 +1425,18 @@ function handleKeydown(e) {
             e.preventDefault();
             flipTo(totalPages - 1);
             break;
+        case 'b':
+        case 'B':
+            // Don't trigger if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') break;
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                toggleBookmarksSidebar();
+            } else {
+                e.preventDefault();
+                toggleBookmark();
+            }
+            break;
     }
 }
 
@@ -1280,6 +1536,9 @@ function loadArticle(contentHtml, options = {}) {
             );
         });
     });
+
+    // Load bookmarks for this content
+    loadBookmarks();
 
     // Refresh cached token
     refreshCachedToken();
@@ -1434,6 +1693,40 @@ export function initReader() {
 
     // Initialize audio reader
     initAudioReader();
+
+    // ---- Bookmarks ----
+    bookmarkToggle = document.getElementById('bookmarkToggle');
+    bookmarkIcon = document.getElementById('bookmarkIcon');
+    bookmarksSidebar = document.getElementById('bookmarksSidebar');
+    bookmarksList = document.getElementById('bookmarksList');
+    bookmarksEmpty = document.getElementById('bookmarksEmpty');
+    bookmarkSearchInput = document.getElementById('bookmarkSearchInput');
+
+    // Click = toggle bookmark on current page
+    if (bookmarkToggle) {
+        bookmarkToggle.addEventListener('click', toggleBookmark);
+        // Right-click = open sidebar
+        bookmarkToggle.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleBookmarksSidebar();
+        });
+    }
+
+    // Sidebar close button
+    const bkSidebarClose = document.getElementById('bkSidebarClose');
+    if (bkSidebarClose) {
+        bkSidebarClose.addEventListener('click', () => {
+            bookmarksSidebar.classList.remove('visible');
+        });
+    }
+
+    // Search input filters list
+    if (bookmarkSearchInput) {
+        bookmarkSearchInput.addEventListener('input', renderBookmarksList);
+    }
+
+    // Resize handle
+    initBookmarkSidebarResize();
 
     // Initial pagination (for any preloaded content)
     paginate();

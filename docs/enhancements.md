@@ -18,7 +18,7 @@
 - [ ] Reading time estimate (word_count / 225 wpm) displayed in toolbar
 - [ ] Swipe gestures for mobile page flipping (touch events exist but may need tuning)
 - [ ] Full-screen reading mode (F11 or button)
-- [ ] Bookmark specific pages within an article
+- [x] Bookmark specific pages within an article — left-side sidebar (mirroring highlights on right), with search/filter, editable labels, drag-to-resize handle, keyboard shortcuts (B to toggle, Ctrl+B for sidebar), localStorage persistence, mobile-responsive full-width drawer. *(branch `claude/update-enhancements-doc-37QV3`)*
 - [ ] Text highlighting and annotation
 - [x] Text-to-speech / audio reader — Web Speech API with play/pause/stop controls, skip forward/backward between sentences, adjustable speed (0.75x–2x), voice selection, sentence-level highlighting synced with speech, slide-up audio player bar. Themed for light/sepia/dark modes with responsive mobile support. *(PR #4, commit `9376232`)*
 - [ ] Night reading mode with blue light filter
