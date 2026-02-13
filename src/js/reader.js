@@ -12,6 +12,7 @@ import { showToast } from './toast.js';
 import { applyTheme } from './theme.js';
 import { marked } from 'marked';
 import { initAudioReader, setAudioContent, cleanupAudio } from './audio-reader.js';
+import { initHighlightManager, loadArticleHighlights, clearHighlights, refreshHighlights } from './highlight-manager.js';
 
 // Configure marked for clean output
 marked.setOptions({
@@ -299,6 +300,29 @@ let cachedAccessToken = null;
 let currentHistoryEntryId = null;
 let historyPositionTimer = null;
 
+// Line height and margin presets
+const LINE_HEIGHT_PRESETS = {
+    compact: { serif: 1.55, sans: 1.48 },
+    default: { serif: 1.72, sans: 1.65 },
+    relaxed: { serif: 1.95, sans: 1.85 },
+};
+const LINE_HEIGHT_ORDER = ['compact', 'default', 'relaxed'];
+let lineHeightPreset = 'default';
+
+const MARGIN_PRESETS = {
+    narrow:  { desktop: 28, mobile: 12 },
+    default: { desktop: 56, mobile: 20 },
+    wide:    { desktop: 80, mobile: 28 },
+};
+const MARGIN_ORDER = ['narrow', 'default', 'wide'];
+let marginPreset = 'default';
+
+// Bookmarks
+let currentBookmarks = [];
+
+// Chapter tracking (EPUB)
+let chapterMap = null;
+
 // DOM references (populated in initReader)
 let flipContent = null;
 let fsVal = null;
@@ -312,6 +336,18 @@ let flipbook = null;
 let readerView = null;
 let inputView = null;
 let newBtn = null;
+
+// New DOM references
+let lineHeightToggle = null;
+let marginToggle = null;
+let readingTimeEl = null;
+let fullscreenBtn = null;
+let chapterIndicator = null;
+let bookmarkToggle = null;
+let bookmarkIcon = null;
+let bookmarksPanel = null;
+let bookmarksList = null;
+let bookmarksEmpty = null;
 
 // Touch state
 let touchStartX = 0;
@@ -519,6 +555,10 @@ function paginate() {
     updatePosition(false);
     updateUI();
     updateBoundaries();
+
+    // Rebuild chapter map after pagination
+    buildChapterMap();
+    updateChapterIndicator();
 }
 
 function updatePosition(animate) {
@@ -557,6 +597,11 @@ function updateUI() {
         progressFill.style.width =
             totalPages > 1 ? ((currentPage / (totalPages - 1)) * 100) + '%' : '100%';
     }
+
+    // Chapter indicator for EPUBs
+    updateChapterIndicator();
+    // Bookmark button state
+    updateBookmarkButton();
 }
 
 function updateBoundaries() {
@@ -577,6 +622,255 @@ function updateBoundaries() {
         flipNextZone.classList.remove('at-boundary');
         pageCurl.classList.remove('at-boundary');
     }
+}
+
+// ==========================================
+// READING TIME ESTIMATE
+// ==========================================
+
+function computeReadingTime(wordCountFromServer) {
+    let wc = wordCountFromServer;
+    if (!wc && flipContent) {
+        const text = flipContent.textContent || '';
+        wc = text.split(/\s+/).filter(w => w.length > 0).length;
+    }
+    if (!readingTimeEl) return;
+    const minutes = Math.max(1, Math.round(wc / 225));
+    readingTimeEl.textContent = minutes < 60
+        ? '~' + minutes + ' min read'
+        : '~' + (Math.round(minutes / 60 * 10) / 10) + ' hr read';
+}
+
+// ==========================================
+// FULLSCREEN
+// ==========================================
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+// ==========================================
+// LINE HEIGHT
+// ==========================================
+
+function applyLineHeight() {
+    if (!flipContent || !lineHeightToggle) return;
+    const values = LINE_HEIGHT_PRESETS[lineHeightPreset];
+    const lh = isSerif ? values.serif : values.sans;
+    flipContent.style.lineHeight = String(lh);
+    lineHeightToggle.textContent = lineHeightPreset === 'compact' ? 'Tight'
+        : lineHeightPreset === 'relaxed' ? 'Loose' : 'Spacing';
+    localStorage.setItem('reader-lh', lineHeightPreset);
+    requestAnimationFrame(paginate);
+}
+
+function cycleLineHeight() {
+    const idx = LINE_HEIGHT_ORDER.indexOf(lineHeightPreset);
+    lineHeightPreset = LINE_HEIGHT_ORDER[(idx + 1) % LINE_HEIGHT_ORDER.length];
+    applyLineHeight();
+}
+
+// ==========================================
+// MARGINS
+// ==========================================
+
+function applyMargins() {
+    if (!flipContent || !marginToggle) return;
+    const isMobile = window.innerWidth <= 640;
+    const values = MARGIN_PRESETS[marginPreset];
+    const px = isMobile ? values.mobile : values.desktop;
+    flipContent.style.paddingLeft = px + 'px';
+    flipContent.style.paddingRight = px + 'px';
+    marginToggle.textContent = marginPreset === 'narrow' ? 'Narrow'
+        : marginPreset === 'wide' ? 'Wide' : 'Margins';
+    localStorage.setItem('reader-margin', marginPreset);
+    requestAnimationFrame(paginate);
+}
+
+function cycleMargins() {
+    const idx = MARGIN_ORDER.indexOf(marginPreset);
+    marginPreset = MARGIN_ORDER[(idx + 1) % MARGIN_ORDER.length];
+    applyMargins();
+}
+
+// ==========================================
+// CHAPTER PROGRESS (EPUB)
+// ==========================================
+
+function buildChapterMap() {
+    if (!flipContent) { chapterMap = null; return; }
+    const chapters = flipContent.querySelectorAll('.epub-chapter');
+    if (chapters.length <= 1) { chapterMap = null; return; }
+
+    const gap = getColumnGap();
+    const computed = getComputedStyle(flipContent);
+    const padLeft = parseFloat(computed.paddingLeft) || 56;
+    const padRight = parseFloat(computed.paddingRight) || 56;
+    const pageWidth = getPageWidth();
+    const actualColumnWidth = pageWidth - padLeft - padRight;
+    const stepSize = actualColumnWidth + gap;
+
+    chapterMap = Array.from(chapters).map((ch, i) => ({
+        index: i,
+        startPage: Math.max(0, Math.floor(ch.offsetLeft / stepSize)),
+        title: (ch.querySelector('h1, h2, h3') || {}).textContent?.trim()
+            || 'Chapter ' + (i + 1),
+    }));
+}
+
+function updateChapterIndicator() {
+    if (!chapterIndicator) return;
+    if (!chapterMap || chapterMap.length === 0) {
+        chapterIndicator.textContent = '';
+        return;
+    }
+    let current = chapterMap[0];
+    for (let i = chapterMap.length - 1; i >= 0; i--) {
+        if (currentPage >= chapterMap[i].startPage) {
+            current = chapterMap[i];
+            break;
+        }
+    }
+    const isMobile = window.innerWidth <= 640;
+    chapterIndicator.textContent = isMobile
+        ? 'Ch. ' + (current.index + 1) + '/' + chapterMap.length
+        : 'Chapter ' + (current.index + 1) + ' of ' + chapterMap.length;
+}
+
+// ==========================================
+// BOOKMARKS
+// ==========================================
+
+async function loadBookmarks(articleId) {
+    currentBookmarks = [];
+    if (!articleId) return;
+    const session = await getSession();
+    if (!session) return;
+    try {
+        const data = await api.get('/api/articles/' + articleId + '/bookmarks');
+        currentBookmarks = data.bookmarks || [];
+    } catch {
+        currentBookmarks = [];
+    }
+    updateBookmarkButton();
+    renderBookmarksList();
+}
+
+function isCurrentPageBookmarked() {
+    return currentBookmarks.some(b => b.page_number === currentPage + 1);
+}
+
+function updateBookmarkButton() {
+    if (!bookmarkToggle || !bookmarkIcon) return;
+    if (isCurrentPageBookmarked()) {
+        bookmarkToggle.classList.add('active');
+        bookmarkIcon.innerHTML = '&#9873;'; // filled flag
+    } else {
+        bookmarkToggle.classList.remove('active');
+        bookmarkIcon.innerHTML = '&#9872;'; // empty flag
+    }
+}
+
+async function toggleBookmark() {
+    const pageNum = currentPage + 1;
+    const existing = currentBookmarks.find(b => b.page_number === pageNum);
+
+    if (existing) {
+        // Remove bookmark
+        if (currentArticleId) {
+            const session = await getSession();
+            if (session) {
+                try {
+                    await api.delete('/api/articles/' + currentArticleId + '/bookmarks/' + existing.id);
+                } catch { /* continue locally */ }
+            }
+        }
+        currentBookmarks = currentBookmarks.filter(b => b.id !== existing.id);
+        showToast('Bookmark removed', 'info');
+    } else {
+        // Add bookmark
+        const bookmark = {
+            id: 'bk-' + Date.now(),
+            page_number: pageNum,
+            label: null,
+            created_at: new Date().toISOString(),
+        };
+
+        if (currentArticleId) {
+            const session = await getSession();
+            if (session) {
+                try {
+                    const result = await api.post(
+                        '/api/articles/' + currentArticleId + '/bookmarks',
+                        { page_number: pageNum }
+                    );
+                    bookmark.id = result.bookmark.id;
+                } catch { /* keep local */ }
+            }
+        }
+        currentBookmarks.push(bookmark);
+        showToast('Page ' + pageNum + ' bookmarked', 'success');
+    }
+
+    updateBookmarkButton();
+    renderBookmarksList();
+}
+
+function renderBookmarksList() {
+    if (!bookmarksList || !bookmarksEmpty) return;
+    bookmarksList.innerHTML = '';
+
+    if (currentBookmarks.length === 0) {
+        bookmarksEmpty.style.display = 'block';
+        return;
+    }
+    bookmarksEmpty.style.display = 'none';
+
+    const sorted = [...currentBookmarks].sort((a, b) => a.page_number - b.page_number);
+    for (const bk of sorted) {
+        const item = document.createElement('div');
+        item.className = 'bookmark-item';
+
+        const pageSpan = document.createElement('span');
+        pageSpan.className = 'bookmark-item-page';
+        pageSpan.textContent = 'Page ' + bk.page_number;
+        item.appendChild(pageSpan);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'bookmark-item-remove';
+        removeBtn.innerHTML = '&#10005;';
+        removeBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (currentArticleId) {
+                const session = await getSession();
+                if (session) {
+                    try {
+                        await api.delete('/api/articles/' + currentArticleId + '/bookmarks/' + bk.id);
+                    } catch { /* continue */ }
+                }
+            }
+            currentBookmarks = currentBookmarks.filter(b => b.id !== bk.id);
+            updateBookmarkButton();
+            renderBookmarksList();
+        });
+        item.appendChild(removeBtn);
+
+        item.addEventListener('click', () => {
+            flipTo(bk.page_number - 1);
+            bookmarksPanel.classList.remove('visible');
+        });
+
+        bookmarksList.appendChild(item);
+    }
+}
+
+function toggleBookmarksPanel() {
+    if (!bookmarksPanel) return;
+    bookmarksPanel.classList.toggle('visible');
 }
 
 function triggerShadow(direction) {
@@ -696,6 +990,8 @@ function buildSavePayload() {
         font_size: fontSize,
         font_family: isSerif ? 'serif' : 'sans',
         theme: document.documentElement.getAttribute('data-theme') || 'light',
+        line_height: lineHeightPreset,
+        margin_width: marginPreset,
     };
 }
 
@@ -851,7 +1147,9 @@ function applyFont() {
     flipContent.style.fontFamily = isSerif
         ? "'Source Serif 4', Georgia, serif"
         : "'Inter', -apple-system, sans-serif";
-    flipContent.style.lineHeight = isSerif ? '1.72' : '1.65';
+    // Use line height preset instead of hardcoded values
+    const lhValues = LINE_HEIGHT_PRESETS[lineHeightPreset];
+    flipContent.style.lineHeight = String(isSerif ? lhValues.serif : lhValues.sans);
     fontToggle.textContent = isSerif ? 'Serif' : 'Sans';
     localStorage.setItem('reader-font', isSerif ? 'serif' : 'sans');
     requestAnimationFrame(paginate);
@@ -889,6 +1187,9 @@ function showInput() {
     currentHistoryEntryId = null;
     updateSaveButton();
     cleanupAudio();
+    currentBookmarks = [];
+    chapterMap = null;
+    clearHighlights();
 }
 
 // ==========================================
@@ -1181,6 +1482,10 @@ function handleKeydown(e) {
             e.preventDefault();
             flipTo(totalPages - 1);
             break;
+        case 'F11':
+            e.preventDefault();
+            toggleFullscreen();
+            break;
     }
 }
 
@@ -1218,6 +1523,9 @@ function handleTouchEnd(e) {
  * @param {number}  [options.fontSize]   - Font size to restore
  * @param {string}  [options.fontFamily] - 'serif' or 'sans'
  * @param {string}  [options.theme]      - Theme to apply
+ * @param {string}  [options.lineHeight] - Line height preset
+ * @param {string}  [options.marginWidth] - Margin width preset
+ * @param {number}  [options.wordCount]  - Word count (from server)
  */
 function loadArticle(contentHtml, options = {}) {
     if (!flipContent) return;
@@ -1248,11 +1556,26 @@ function loadArticle(contentHtml, options = {}) {
     if (options.theme) {
         applyTheme(options.theme);
     }
+    if (options.lineHeight && LINE_HEIGHT_PRESETS[options.lineHeight]) {
+        lineHeightPreset = options.lineHeight;
+    }
+    if (options.marginWidth && MARGIN_PRESETS[options.marginWidth]) {
+        marginPreset = options.marginWidth;
+    }
 
     // Apply font settings
     applyFontSize();
     applyFont();
+    if (lineHeightToggle) applyLineHeight();
+    if (marginToggle) applyMargins();
     updateSaveButton();
+
+    // Reading time estimate
+    computeReadingTime(options.wordCount);
+
+    // Load bookmarks and highlights
+    loadBookmarks(options.articleId);
+    loadArticleHighlights(options.articleId);
 
     // Show reader view
     showReader();
@@ -1304,6 +1627,9 @@ export function openArticle(articleData) {
         fontSize: articleData.font_size,
         fontFamily: articleData.font_family,
         theme: articleData.theme,
+        lineHeight: articleData.line_height,
+        marginWidth: articleData.margin_width,
+        wordCount: articleData.word_count,
     });
 }
 
@@ -1370,6 +1696,18 @@ export function initReader() {
     inputView = document.getElementById('inputView');
     newBtn = document.getElementById('newBtn');
 
+    // New DOM references
+    lineHeightToggle = document.getElementById('lineHeightToggle');
+    marginToggle = document.getElementById('marginToggle');
+    readingTimeEl = document.getElementById('readingTime');
+    fullscreenBtn = document.getElementById('fullscreenBtn');
+    chapterIndicator = document.getElementById('chapterIndicator');
+    bookmarkToggle = document.getElementById('bookmarkToggle');
+    bookmarkIcon = document.getElementById('bookmarkIcon');
+    bookmarksPanel = document.getElementById('bookmarksPanel');
+    bookmarksList = document.getElementById('bookmarksList');
+    bookmarksEmpty = document.getElementById('bookmarksEmpty');
+
     // Restore persisted preferences
     const savedFs = parseInt(localStorage.getItem('reader-fs'));
     if (savedFs && savedFs >= 14 && savedFs <= 36) fontSize = savedFs;
@@ -1377,9 +1715,17 @@ export function initReader() {
     const savedFont = localStorage.getItem('reader-font');
     if (savedFont) isSerif = savedFont !== 'sans';
 
+    const savedLh = localStorage.getItem('reader-lh');
+    if (savedLh && LINE_HEIGHT_PRESETS[savedLh]) lineHeightPreset = savedLh;
+
+    const savedMargin = localStorage.getItem('reader-margin');
+    if (savedMargin && MARGIN_PRESETS[savedMargin]) marginPreset = savedMargin;
+
     // Apply initial font settings
     applyFontSize();
     applyFont();
+    if (lineHeightToggle) applyLineHeight();
+    if (marginToggle) applyMargins();
 
     // ---- Event listeners ----
 
@@ -1432,8 +1778,64 @@ export function initReader() {
     initUrlFetch();
     initPasteText();
 
+    // Line height toggle
+    if (lineHeightToggle) lineHeightToggle.addEventListener('click', cycleLineHeight);
+
+    // Margin toggle
+    if (marginToggle) marginToggle.addEventListener('click', cycleMargins);
+
+    // Fullscreen toggle
+    if (fullscreenBtn) {
+        // Hide if Fullscreen API not supported
+        if (!document.documentElement.requestFullscreen) {
+            fullscreenBtn.style.display = 'none';
+        } else {
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+        }
+    }
+
+    // Fullscreen change — update icon and re-paginate
+    document.addEventListener('fullscreenchange', () => {
+        const isFs = !!document.fullscreenElement;
+        const icon = document.getElementById('fsIcon');
+        if (icon) icon.innerHTML = isFs ? '&#x2716;' : '&#x26F6;';
+        requestAnimationFrame(paginate);
+    });
+
+    // Bookmark toggle
+    if (bookmarkToggle) bookmarkToggle.addEventListener('click', toggleBookmark);
+
+    // Bookmarks panel toggle (long press on bookmark button)
+    if (bookmarkToggle) {
+        let pressTimer = null;
+        bookmarkToggle.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleBookmarksPanel();
+        });
+    }
+
+    // Bookmarks panel close
+    const bookmarksPanelClose = document.getElementById('bookmarksPanelClose');
+    if (bookmarksPanelClose) {
+        bookmarksPanelClose.addEventListener('click', () => {
+            bookmarksPanel.classList.remove('visible');
+        });
+    }
+
+    // Navigate-to-element custom event (from highlight manager)
+    if (flipContent) {
+        flipContent.addEventListener('navigate-to-element', (e) => {
+            if (e.detail && e.detail.element) {
+                navigateToElement(e.detail.element);
+            }
+        });
+    }
+
     // Initialize audio reader
     initAudioReader();
+
+    // Initialize highlight manager
+    initHighlightManager();
 
     // Initial pagination (for any preloaded content)
     paginate();

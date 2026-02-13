@@ -19,6 +19,8 @@ class Article(db.Model):
     font_size = db.Column(db.Integer, default=20)
     font_family = db.Column(db.String(50), default='serif')
     theme = db.Column(db.String(10), default='light')
+    line_height = db.Column(db.String(10), default='default')
+    margin_width = db.Column(db.String(10), default='default')
     last_read_at = db.Column(db.DateTime, nullable=True)
     saved_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 

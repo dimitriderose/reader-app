@@ -23,6 +23,8 @@ def _article_to_dict(article, include_content=False):
         'font_size': article.font_size,
         'font_family': article.font_family,
         'theme': article.theme,
+        'line_height': article.line_height,
+        'margin_width': article.margin_width,
         'collection_id': article.collection_id,
         'last_read_at': article.last_read_at.isoformat() if article.last_read_at else None,
         'saved_at': article.saved_at.isoformat() if article.saved_at else None,
@@ -109,6 +111,8 @@ def save_article():
         font_size=data.get('font_size', 20),
         font_family=data.get('font_family', 'serif'),
         theme=data.get('theme', 'light'),
+        line_height=data.get('line_height', 'default'),
+        margin_width=data.get('margin_width', 'default'),
         collection_id=data.get('collection_id'),
     )
     db.session.add(article)
@@ -148,6 +152,10 @@ def update_article(article_id):
         article.font_family = data['font_family']
     if 'theme' in data:
         article.theme = data['theme']
+    if 'line_height' in data:
+        article.line_height = data['line_height']
+    if 'margin_width' in data:
+        article.margin_width = data['margin_width']
 
     article.last_read_at = datetime.now(timezone.utc)
     db.session.commit()

@@ -4,9 +4,13 @@ def register_blueprints(app):
     from app.api.history import bp as history_bp
     from app.api.fetch import bp as fetch_bp
     from app.api.user import bp as user_bp
+    from app.api.bookmarks import bp as bookmarks_bp
+    from app.api.highlights import bp as highlights_bp
 
     app.register_blueprint(articles_bp)
     app.register_blueprint(collections_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(fetch_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(bookmarks_bp)
+    app.register_blueprint(highlights_bp)

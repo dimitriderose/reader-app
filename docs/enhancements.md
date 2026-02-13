@@ -15,15 +15,15 @@
 - [ ] Better error messages per domain (e.g., "This site requires JavaScript" vs "Access denied")
 
 ## Reader Experience
-- [ ] Reading time estimate (word_count / 225 wpm) displayed in toolbar
-- [ ] Swipe gestures for mobile page flipping (touch events exist but may need tuning)
-- [ ] Full-screen reading mode (F11 or button)
-- [ ] Bookmark specific pages within an article
-- [ ] Text highlighting and annotation
+- [x] Reading time estimate (word_count / 225 wpm) displayed in toolbar — computes from server-provided `word_count` for library articles or client-side text extraction for URL/paste/file content. Shows `~X min read` in toolbar, hidden on mobile to prevent overflow.
+- [x] Swipe gestures for mobile page flipping — touch start/end handlers with 40px threshold and horizontal vs. vertical discrimination, passive event listeners. *(reader.js lines 1188-1203)*
+- [x] Full-screen reading mode (F11 or button) — Fullscreen API toggle with toolbar button, F11 keyboard shortcut, auto-hide header in fullscreen, re-pagination on viewport change. Hidden on devices without Fullscreen API support.
+- [x] Bookmark specific pages within an article — per-page bookmark toggle in bottom bar (flag icon), bookmarks panel with navigation, server-persisted via `Bookmark` model and `/api/articles/:id/bookmarks` REST API (GET/POST/DELETE). Unique constraint on (article_id, page_number).
+- [x] Text highlighting and annotation — selection-based highlighting with 4 color choices (yellow/green/blue/pink), optional annotation notes, XPath-based range serialization that survives re-pagination, highlights sidebar panel for browsing/editing/deleting. Server-persisted via `Highlight` model and `/api/articles/:id/highlights` REST API (CRUD). New `highlight-manager.js` module.
 - [x] Text-to-speech / audio reader — Web Speech API with play/pause/stop controls, skip forward/backward between sentences, adjustable speed (0.75x–2x), voice selection, sentence-level highlighting synced with speech, slide-up audio player bar. Themed for light/sepia/dark modes with responsive mobile support. *(PR #4, commit `9376232`)*
-- [ ] Night reading mode with blue light filter
-- [ ] Adjustable line height and margins
-- [ ] Progress bar per chapter (for EPUBs)
+- [x] Night reading mode with blue light filter — 4th theme option ("Night") with warm amber-shifted dark palette (`--bg: #1C1810`, `--text: #D8CFC0`, `--accent: #C4A060`), subtle sepia filter on reading content, theme dot in header. Works with existing generic theme system — no JS changes needed.
+- [x] Adjustable line height and margins — 3-preset cycle buttons in toolbar: line spacing (Tight/Spacing/Loose) and margins (Narrow/Margins/Wide). Persisted in localStorage (`reader-lh`, `reader-margin`) and server-side per article (`line_height`, `margin_width` columns). Re-paginates on change. Presets adapt to serif/sans font and desktop/mobile breakpoints.
+- [x] Progress bar per chapter (for EPUBs) — chapter indicator in bottom bar showing "Chapter X of Y" (shortened to "Ch. X/Y" on mobile). Built by inspecting `.epub-chapter` element `offsetLeft` values after pagination. Rebuilds on re-pagination, hidden for non-EPUB content.
 
 ## Library & Collections
 - [ ] Drag-and-drop to reorder collections

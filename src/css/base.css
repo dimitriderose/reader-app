@@ -63,6 +63,23 @@
     --save-color: #E8BD5A;
 }
 
+[data-theme="night"] {
+    --bg: #1C1810;
+    --bg-outer: #120F08;
+    --surface: #252015;
+    --surface-2: #2D2618;
+    --text: #D8CFC0;
+    --text-muted: #8A7E6A;
+    --border: #3A3225;
+    --accent: #C4A060;
+    --accent-hover: #D4B070;
+    --page-shadow: rgba(0, 0, 0, 0.5);
+    --page-fold: rgba(0, 0, 0, 0.6);
+    --error: #FF8A6B;
+    --error-bg: #2D1B15;
+    --save-color: #D4A843;
+}
+
 /* ========================================
    BASE STYLES
    ======================================== */
@@ -189,6 +206,7 @@ body {
 .theme-dot.t-light { background: #FAFAF7; }
 .theme-dot.t-sepia { background: #F2E8D5; }
 .theme-dot.t-dark { background: #1A1A1A; }
+.theme-dot.t-night { background: #1C1810; border-color: #C4A060; }
 
 /* ========================================
    USER AVATAR / SIGN-IN BUTTON

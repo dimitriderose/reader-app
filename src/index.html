@@ -27,6 +27,7 @@
                 <div class="theme-dot t-light active" data-theme="" title="Light"></div>
                 <div class="theme-dot t-sepia" data-theme="sepia" title="Sepia"></div>
                 <div class="theme-dot t-dark" data-theme="dark" title="Dark"></div>
+                <div class="theme-dot t-night" data-theme="night" title="Night"></div>
             </div>
             <!-- Sign-in button (visible when signed out) -->
             <button class="signin-btn" id="headerSignin">Sign in</button>
@@ -86,6 +87,13 @@
                 <span class="tb-label">Font</span>
                 <button class="tb-toggle" id="fontToggle">Serif</button>
             </div>
+            <div class="tb-group tb-group-spacing">
+                <button class="tb-toggle" id="lineHeightToggle" title="Line spacing">Spacing</button>
+            </div>
+            <div class="tb-group tb-group-margins">
+                <button class="tb-toggle" id="marginToggle" title="Page margins">Margins</button>
+            </div>
+            <span class="tb-reading-time" id="readingTime"></span>
             <div class="tb-divider"></div>
             <button class="listen-btn" id="listenBtn" title="Listen to article">
                 <span class="listen-icon">&#9654;</span>
@@ -95,6 +103,10 @@
             <button class="save-btn" id="saveBtn" title="Save to library">
                 <span class="save-icon">&#9734;</span>
                 <span class="save-label">Save</span>
+            </button>
+            <div class="tb-divider"></div>
+            <button class="tb-toggle" id="fullscreenBtn" title="Full screen (F11)">
+                <span class="fs-icon" id="fsIcon">&#x26F6;</span>
             </button>
         </div>
 
@@ -112,7 +124,9 @@
         </div>
 
         <div class="bottom-bar">
-            <div></div>
+            <div class="bottom-bar-left">
+                <span class="chapter-indicator" id="chapterIndicator"></span>
+            </div>
             <div class="page-center">
                 <div class="page-info">
                     <span class="current" id="pageNum">1</span> of <span id="pageTotal">1</span>
@@ -121,7 +135,14 @@
                     <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> to flip
                 </div>
             </div>
-            <div></div>
+            <div class="bottom-bar-right">
+                <button class="bb-btn" id="bookmarkToggle" title="Bookmark this page">
+                    <span class="bb-icon" id="bookmarkIcon">&#9872;</span>
+                </button>
+                <button class="bb-btn" id="highlightPanelBtn" title="Highlights &amp; Notes">
+                    <span class="bb-icon">&#9998;</span>
+                </button>
+            </div>
         </div>
 
         <div class="audio-bar" id="audioBar">
@@ -151,6 +172,36 @@
                     <select class="audio-voice-select" id="audioVoice" title="Choose voice" aria-label="Choose voice"></select>
                 </div>
             </div>
+        </div>
+
+        <!-- Bookmarks dropdown -->
+        <div class="bookmarks-panel" id="bookmarksPanel">
+            <div class="bookmarks-header">
+                <span class="bookmarks-title">Bookmarks</span>
+                <button class="bookmarks-close" id="bookmarksPanelClose">&#10005;</button>
+            </div>
+            <div class="bookmarks-list" id="bookmarksList"></div>
+            <div class="bookmarks-empty" id="bookmarksEmpty">No bookmarks yet</div>
+        </div>
+
+        <!-- Highlight color popup (shown on text selection) -->
+        <div class="highlight-popup" id="highlightPopup">
+            <button class="hl-color hl-yellow" data-color="yellow" title="Yellow"></button>
+            <button class="hl-color hl-green" data-color="green" title="Green"></button>
+            <button class="hl-color hl-blue" data-color="blue" title="Blue"></button>
+            <button class="hl-color hl-pink" data-color="pink" title="Pink"></button>
+            <div class="hl-divider"></div>
+            <button class="hl-note-btn" id="hlNoteBtn" title="Add note">&#128221;</button>
+        </div>
+
+        <!-- Highlights sidebar -->
+        <div class="highlights-sidebar" id="highlightsSidebar">
+            <div class="hl-sidebar-header">
+                <span class="hl-sidebar-title">Highlights &amp; Notes</span>
+                <button class="hl-sidebar-close" id="hlSidebarClose">&#10005;</button>
+            </div>
+            <div class="hl-sidebar-list" id="hlSidebarList"></div>
+            <div class="hl-sidebar-empty" id="hlSidebarEmpty">Select text to highlight</div>
         </div>
 
         <div class="page-progress">
