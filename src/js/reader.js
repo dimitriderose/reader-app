@@ -12,7 +12,7 @@ import { showToast } from './toast.js';
 import { applyTheme } from './theme.js';
 import { marked } from 'marked';
 import { initAudioReader, setAudioContent, cleanupAudio } from './audio-reader.js';
-import { initHighlightManager, loadArticleHighlights, clearHighlights, refreshHighlights, migrateHighlightsToServer } from './highlight-manager.js';
+import { initHighlightManager, loadArticleHighlights, clearHighlights, refreshHighlights, migrateHighlightsToServer, toggleHighlightsSidebar } from './highlight-manager.js';
 
 // Configure marked for clean output
 marked.setOptions({
@@ -1889,9 +1889,47 @@ export function initReader() {
         });
     }
 
-    // Bookmarks list button: click = open bookmarks panel
-    const bookmarkListBtn = document.getElementById('bookmarkListBtn');
-    if (bookmarkListBtn) bookmarkListBtn.addEventListener('click', toggleBookmarksPanel);
+    // ---- Reader Tools Menu (☰) ----
+    const readerMenuBtn = document.getElementById('readerMenuBtn');
+    const readerMenu = document.getElementById('readerMenu');
+
+    if (readerMenuBtn && readerMenu) {
+        readerMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            readerMenu.classList.toggle('visible');
+        });
+        document.addEventListener('click', (e) => {
+            if (!readerMenu.contains(e.target) && !readerMenuBtn.contains(e.target)) {
+                readerMenu.classList.remove('visible');
+            }
+        });
+    }
+
+    // Menu: View Bookmarks
+    document.getElementById('rmBookmarkList')?.addEventListener('click', () => {
+        readerMenu.classList.remove('visible');
+        toggleBookmarksPanel();
+    });
+
+    // Menu: Highlights & Notes
+    document.getElementById('rmHighlights')?.addEventListener('click', () => {
+        readerMenu.classList.remove('visible');
+        toggleHighlightsSidebar();
+    });
+
+    // Menu: Go to Library
+    document.getElementById('rmLibrary')?.addEventListener('click', async () => {
+        readerMenu.classList.remove('visible');
+        const { navigate } = await import('./app.js');
+        navigate('/library');
+    });
+
+    // Menu: Go to History
+    document.getElementById('rmHistory')?.addEventListener('click', async () => {
+        readerMenu.classList.remove('visible');
+        const { navigate } = await import('./app.js');
+        navigate('/history');
+    });
 
     // Bookmarks panel close
     const bookmarksPanelClose = document.getElementById('bookmarksPanelClose');

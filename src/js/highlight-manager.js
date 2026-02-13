@@ -603,6 +603,13 @@ export function refreshHighlights() {
 }
 
 /**
+ * Toggle the highlights sidebar (called from reader.js menu).
+ */
+export function toggleHighlightsSidebar() {
+    toggleSidebar();
+}
+
+/**
  * Migrate in-memory highlights to the server after saving to library.
  * Called from reader.js when an article gets a server-side ID.
  */

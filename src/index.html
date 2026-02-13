@@ -105,6 +105,36 @@
                 <span class="save-label">Save</span>
             </button>
             <div class="tb-divider"></div>
+            <button class="tb-toggle" id="bookmarkToggle" title="Bookmark this page">
+                <span id="bookmarkIcon">&#9872;</span>
+                <span class="bookmark-count" id="bookmarkCount"></span>
+            </button>
+            <div class="tb-divider"></div>
+            <div class="reader-menu-wrap">
+                <button class="tb-toggle" id="readerMenuBtn" title="Reader tools">
+                    <span>&#9776;</span>
+                </button>
+                <div class="reader-menu" id="readerMenu">
+                    <button class="rm-item" id="rmBookmarkList">
+                        <span class="rm-icon">&#128278;</span>
+                        <span class="rm-label">View Bookmarks</span>
+                    </button>
+                    <button class="rm-item" id="rmHighlights">
+                        <span class="rm-icon">&#9998;</span>
+                        <span class="rm-label">Highlights &amp; Notes</span>
+                    </button>
+                    <div class="rm-divider"></div>
+                    <button class="rm-item" id="rmLibrary">
+                        <span class="rm-icon">&#128218;</span>
+                        <span class="rm-label">Go to Library</span>
+                    </button>
+                    <button class="rm-item" id="rmHistory">
+                        <span class="rm-icon">&#128336;</span>
+                        <span class="rm-label">Go to History</span>
+                    </button>
+                </div>
+            </div>
+            <div class="tb-divider"></div>
             <button class="tb-toggle" id="fullscreenBtn" title="Full screen (F11)">
                 <span class="fs-icon" id="fsIcon">&#x26F6;</span>
             </button>
@@ -135,18 +165,7 @@
                     <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> to flip
                 </div>
             </div>
-            <div class="bottom-bar-right">
-                <button class="bb-btn" id="bookmarkToggle" title="Bookmark this page">
-                    <span class="bb-icon" id="bookmarkIcon">&#9872;</span>
-                    <span class="bookmark-count" id="bookmarkCount"></span>
-                </button>
-                <button class="bb-btn" id="bookmarkListBtn" title="View bookmarks">
-                    <span class="bb-icon">&#9776;</span>
-                </button>
-                <button class="bb-btn" id="highlightPanelBtn" title="Highlights &amp; Notes">
-                    <span class="bb-icon">&#9998;</span>
-                </button>
-            </div>
+            <div class="bottom-bar-right"></div>
         </div>
 
         <div class="audio-bar" id="audioBar">
