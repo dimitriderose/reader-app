@@ -1,9 +1,9 @@
 # Reader App — Future Enhancements
 
 ## Authentication
-- [ ] Configure Google OAuth in Supabase (Dashboard → Auth → Providers → Google) — requires Google Cloud Console OAuth 2.0 credentials (Client ID + Secret), add Supabase callback URL as authorized redirect URI
-- [ ] Add email confirmation flow (currently `mailer_autoconfirm: false` in Supabase)
-- [ ] Password reset UI (form exists in auth modal, needs testing with Supabase email templates)
+- [x] Google OAuth sign-in — frontend `handleOAuthSignIn('google')` with Supabase `signInWithOAuth`, OAuth button bindings, and redirect URL support for dev+prod. Backend JWT validation via JWKS with auto-provisioned user profiles. *(commits `af5a7a2`, `5fb7b8c`, PR #2)*
+- [x] Email confirmation flow — `handleRegister()` detects when Supabase requires email confirmation (no session returned) and shows "Check your email to confirm your account" toast. *(commit `af5a7a2`)*
+- [x] Password reset UI — full forgot-password form with email validation, `resetPasswordForEmail` Supabase call, and success confirmation showing the submitted email. *(commit `af5a7a2`)*
 
 ## Scraper / Content Extraction
 - [x] JS-rendered sites (MSN, Bloomberg, etc.) — solved with 3-layer scraper fallback: requests → cloudscraper → Playwright headless Chromium. Includes signal-driven escalation, thin-content detection, CF challenge detection, and Edge `read://` URL unwrapping. *(PR #3, commits `a114fb3`..`cd968af`)*
