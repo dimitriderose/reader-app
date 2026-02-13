@@ -1880,42 +1880,18 @@ export function initReader() {
         requestAnimationFrame(paginate);
     });
 
-    // Bookmark: click = toggle, long-press (300ms) = open panel, right-click = open panel
+    // Bookmark toggle: click = bookmark/unbookmark current page
     if (bookmarkToggle) {
-        let pressTimer = null;
-        let didLongPress = false;
-
-        const startPress = () => {
-            didLongPress = false;
-            pressTimer = setTimeout(() => {
-                didLongPress = true;
-                toggleBookmarksPanel();
-            }, 300);
-        };
-        const endPress = () => {
-            clearTimeout(pressTimer);
-        };
-
-        bookmarkToggle.addEventListener('mousedown', startPress);
-        bookmarkToggle.addEventListener('mouseup', endPress);
-        bookmarkToggle.addEventListener('mouseleave', endPress);
-        bookmarkToggle.addEventListener('touchstart', startPress, { passive: true });
-        bookmarkToggle.addEventListener('touchend', endPress);
-        bookmarkToggle.addEventListener('touchcancel', endPress);
-
-        bookmarkToggle.addEventListener('click', (e) => {
-            if (didLongPress) {
-                e.preventDefault();
-                return; // Long press already opened the panel
-            }
-            toggleBookmark();
-        });
-
+        bookmarkToggle.addEventListener('click', toggleBookmark);
         bookmarkToggle.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             toggleBookmarksPanel();
         });
     }
+
+    // Bookmarks list button: click = open bookmarks panel
+    const bookmarkListBtn = document.getElementById('bookmarkListBtn');
+    if (bookmarkListBtn) bookmarkListBtn.addEventListener('click', toggleBookmarksPanel);
 
     // Bookmarks panel close
     const bookmarksPanelClose = document.getElementById('bookmarksPanelClose');
