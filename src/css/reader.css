@@ -1129,8 +1129,34 @@ mark.audio-highlight {
     color: var(--bg);
 }
 
+.bb-btn {
+    position: relative;
+}
+
 .bb-icon {
     line-height: 1;
+}
+
+.bookmark-count {
+    display: none;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--save-color);
+    color: var(--bg);
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 7px;
+    padding: 0 3px;
+    pointer-events: auto;
+}
+
+.bookmark-count.visible {
+    display: block;
 }
 
 /* ----------------------------------------

@@ -12,7 +12,7 @@ import { showToast } from './toast.js';
 import { applyTheme } from './theme.js';
 import { marked } from 'marked';
 import { initAudioReader, setAudioContent, cleanupAudio } from './audio-reader.js';
-import { initHighlightManager, loadArticleHighlights, clearHighlights, refreshHighlights } from './highlight-manager.js';
+import { initHighlightManager, loadArticleHighlights, clearHighlights, refreshHighlights, migrateHighlightsToServer } from './highlight-manager.js';
 
 // Configure marked for clean output
 marked.setOptions({
@@ -319,6 +319,42 @@ let marginPreset = 'default';
 
 // Bookmarks
 let currentBookmarks = [];
+
+// Simple djb2 hash for content-based localStorage keys
+function simpleHash(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
+    }
+    return hash.toString(36);
+}
+
+function getBookmarkStorageKey() {
+    if (currentArticleId) return 'reader-bookmarks-' + currentArticleId;
+    if (currentContentHtml) {
+        return 'reader-bookmarks-hash-' + simpleHash(currentContentHtml.substring(0, 500));
+    }
+    return null;
+}
+
+function persistBookmarksLocal() {
+    const key = getBookmarkStorageKey();
+    if (key) {
+        try {
+            localStorage.setItem(key, JSON.stringify(currentBookmarks));
+        } catch { /* quota exceeded — ignore */ }
+    }
+}
+
+function loadBookmarksLocal() {
+    const key = getBookmarkStorageKey();
+    if (!key) return [];
+    try {
+        return JSON.parse(localStorage.getItem(key)) || [];
+    } catch {
+        return [];
+    }
+}
 
 // Chapter tracking (EPUB)
 let chapterMap = null;
@@ -747,15 +783,25 @@ function updateChapterIndicator() {
 
 async function loadBookmarks(articleId) {
     currentBookmarks = [];
-    if (!articleId) return;
-    const session = await getSession();
-    if (!session) return;
-    try {
-        const data = await api.get('/api/articles/' + articleId + '/bookmarks');
-        currentBookmarks = data.bookmarks || [];
-    } catch {
-        currentBookmarks = [];
+
+    // Try server first if we have an article ID and session
+    if (articleId) {
+        const session = await getSession();
+        if (session) {
+            try {
+                const data = await api.get('/api/articles/' + articleId + '/bookmarks');
+                currentBookmarks = data.bookmarks || [];
+                updateBookmarkButton();
+                renderBookmarksList();
+                return;
+            } catch {
+                // Fall through to localStorage
+            }
+        }
     }
+
+    // Fallback: load from localStorage (works for URL, paste, file, and offline)
+    currentBookmarks = loadBookmarksLocal();
     updateBookmarkButton();
     renderBookmarksList();
 }
@@ -772,6 +818,17 @@ function updateBookmarkButton() {
     } else {
         bookmarkToggle.classList.remove('active');
         bookmarkIcon.innerHTML = '&#9872;'; // empty flag
+    }
+
+    // Update count badge
+    const countEl = document.getElementById('bookmarkCount');
+    if (countEl) {
+        if (currentBookmarks.length > 0) {
+            countEl.textContent = currentBookmarks.length;
+            countEl.classList.add('visible');
+        } else {
+            countEl.classList.remove('visible');
+        }
     }
 }
 
@@ -816,6 +873,8 @@ async function toggleBookmark() {
         showToast('Page ' + pageNum + ' bookmarked', 'success');
     }
 
+    // Always persist to localStorage (works for all article types)
+    persistBookmarksLocal();
     updateBookmarkButton();
     renderBookmarksList();
 }
@@ -854,6 +913,7 @@ function renderBookmarksList() {
                 }
             }
             currentBookmarks = currentBookmarks.filter(b => b.id !== bk.id);
+            persistBookmarksLocal();
             updateBookmarkButton();
             renderBookmarksList();
         });
@@ -1111,6 +1171,24 @@ async function handleSave() {
         currentArticleId = result.article.id;
         updateSaveButton();
         showToast('Saved to library', 'success');
+
+        // Migrate local bookmarks to server (fire-and-forget)
+        if (currentBookmarks.length > 0) {
+            for (const bk of currentBookmarks) {
+                if (bk.id && !bk.id.startsWith('bk-')) continue;
+                try {
+                    const bkResult = await api.post(
+                        '/api/articles/' + currentArticleId + '/bookmarks',
+                        { page_number: bk.page_number, label: bk.label }
+                    );
+                    bk.id = bkResult.bookmark.id;
+                } catch { /* ignore duplicates */ }
+            }
+            persistBookmarksLocal();
+        }
+
+        // Migrate local highlights to server (fire-and-forget)
+        migrateHighlightsToServer(currentArticleId);
     } catch (err) {
         showToast('Failed to save: ' + err.message, 'error');
     } finally {
@@ -1802,12 +1880,37 @@ export function initReader() {
         requestAnimationFrame(paginate);
     });
 
-    // Bookmark toggle
-    if (bookmarkToggle) bookmarkToggle.addEventListener('click', toggleBookmark);
-
-    // Bookmarks panel toggle (long press on bookmark button)
+    // Bookmark: click = toggle, long-press (300ms) = open panel, right-click = open panel
     if (bookmarkToggle) {
         let pressTimer = null;
+        let didLongPress = false;
+
+        const startPress = () => {
+            didLongPress = false;
+            pressTimer = setTimeout(() => {
+                didLongPress = true;
+                toggleBookmarksPanel();
+            }, 300);
+        };
+        const endPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        bookmarkToggle.addEventListener('mousedown', startPress);
+        bookmarkToggle.addEventListener('mouseup', endPress);
+        bookmarkToggle.addEventListener('mouseleave', endPress);
+        bookmarkToggle.addEventListener('touchstart', startPress, { passive: true });
+        bookmarkToggle.addEventListener('touchend', endPress);
+        bookmarkToggle.addEventListener('touchcancel', endPress);
+
+        bookmarkToggle.addEventListener('click', (e) => {
+            if (didLongPress) {
+                e.preventDefault();
+                return; // Long press already opened the panel
+            }
+            toggleBookmark();
+        });
+
         bookmarkToggle.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             toggleBookmarksPanel();

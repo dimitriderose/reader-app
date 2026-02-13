@@ -22,6 +22,15 @@ let sidebarList = null;
 let sidebarEmpty = null;
 let pendingRange = null;    // The Range object from current selection
 
+// Simple djb2 hash for content-based localStorage keys
+function simpleHash(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
+    }
+    return hash.toString(36);
+}
+
 // ==========================================
 // XPATH UTILITIES
 // ==========================================
@@ -225,10 +234,12 @@ function renderAllHighlights() {
 // ==========================================
 
 function getStorageKey() {
-    // Use article ID if available, otherwise a simple key
-    return currentArticleId
-        ? 'reader-highlights-' + currentArticleId
-        : null;
+    if (currentArticleId) return 'reader-highlights-' + currentArticleId;
+    // Fallback: content-based hash for non-library articles (URL, paste, file)
+    if (flipContent && flipContent.textContent) {
+        return 'reader-highlights-hash-' + simpleHash(flipContent.textContent.substring(0, 500));
+    }
+    return null;
 }
 
 async function loadHighlights(articleId) {
@@ -589,4 +600,41 @@ export function clearHighlights() {
  */
 export function refreshHighlights() {
     renderAllHighlights();
+}
+
+/**
+ * Migrate in-memory highlights to the server after saving to library.
+ * Called from reader.js when an article gets a server-side ID.
+ */
+export async function migrateHighlightsToServer(articleId) {
+    if (!articleId || highlights.length === 0) return;
+    currentArticleId = articleId;
+    const session = await getSession();
+    if (!session) return;
+
+    for (const hl of highlights) {
+        // Skip if already has a server-generated UUID (not a local temp id)
+        if (hl.id && !hl.id.startsWith('hl-')) continue;
+        try {
+            const result = await api.post(
+                '/api/articles/' + articleId + '/highlights',
+                {
+                    start_xpath: hl.start_xpath,
+                    start_offset: hl.start_offset,
+                    end_xpath: hl.end_xpath,
+                    end_offset: hl.end_offset,
+                    selected_text: hl.selected_text,
+                    note: hl.note || null,
+                    color: hl.color || 'yellow',
+                }
+            );
+            hl.id = result.highlight.id;
+        } catch { /* ignore duplicates or failures */ }
+    }
+
+    // Update localStorage with new server IDs
+    const key = getStorageKey();
+    if (key) {
+        localStorage.setItem(key, JSON.stringify(highlights));
+    }
 }
