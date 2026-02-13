@@ -384,6 +384,8 @@ let bookmarkIcon = null;
 let bookmarksPanel = null;
 let bookmarksList = null;
 let bookmarksEmpty = null;
+let bookmarkSearchInput = null;
+let bkSidebarResizing = false;
 
 // Touch state
 let touchStartX = 0;
@@ -883,25 +885,72 @@ function renderBookmarksList() {
     if (!bookmarksList || !bookmarksEmpty) return;
     bookmarksList.innerHTML = '';
 
-    if (currentBookmarks.length === 0) {
+    const query = bookmarkSearchInput ? bookmarkSearchInput.value.trim().toLowerCase() : '';
+
+    const sorted = [...currentBookmarks].sort((a, b) => a.page_number - b.page_number);
+
+    const filtered = query
+        ? sorted.filter(bk => {
+            const pageTxt = 'page ' + bk.page_number;
+            const label = (bk.label || '').toLowerCase();
+            return pageTxt.includes(query) || label.includes(query);
+        })
+        : sorted;
+
+    if (filtered.length === 0) {
         bookmarksEmpty.style.display = 'block';
+        bookmarksEmpty.textContent = query ? 'No matching bookmarks' : 'No bookmarks yet';
         return;
     }
     bookmarksEmpty.style.display = 'none';
 
-    const sorted = [...currentBookmarks].sort((a, b) => a.page_number - b.page_number);
-    for (const bk of sorted) {
+    for (const bk of filtered) {
         const item = document.createElement('div');
         item.className = 'bookmark-item';
+        if (bk.page_number === currentPage + 1) item.classList.add('current-page');
+
+        const info = document.createElement('div');
+        info.className = 'bookmark-item-info';
 
         const pageSpan = document.createElement('span');
         pageSpan.className = 'bookmark-item-page';
-        pageSpan.textContent = 'Page ' + bk.page_number;
-        item.appendChild(pageSpan);
+        pageSpan.textContent = 'Page ' + bk.page_number + ' of ' + totalPages;
+        info.appendChild(pageSpan);
+
+        if (bk.label) {
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'bookmark-item-label';
+            labelSpan.textContent = bk.label;
+            info.appendChild(labelSpan);
+        }
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'bookmark-item-date';
+        dateSpan.textContent = formatBookmarkDate(bk.created_at);
+        info.appendChild(dateSpan);
+
+        item.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'bookmark-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'bookmark-item-action';
+        editBtn.textContent = bk.label ? 'Edit' : 'Label';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newLabel = prompt('Bookmark label:', bk.label || '');
+            if (newLabel !== null) {
+                bk.label = newLabel.trim() || null;
+                persistBookmarksLocal();
+                renderBookmarksList();
+            }
+        });
+        actions.appendChild(editBtn);
 
         const removeBtn = document.createElement('button');
-        removeBtn.className = 'bookmark-item-remove';
-        removeBtn.innerHTML = '&#10005;';
+        removeBtn.className = 'bookmark-item-action delete';
+        removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             if (currentArticleId) {
@@ -917,20 +966,69 @@ function renderBookmarksList() {
             updateBookmarkButton();
             renderBookmarksList();
         });
-        item.appendChild(removeBtn);
+        actions.appendChild(removeBtn);
+
+        item.appendChild(actions);
 
         item.addEventListener('click', () => {
             flipTo(bk.page_number - 1);
-            bookmarksPanel.classList.remove('visible');
         });
 
         bookmarksList.appendChild(item);
     }
 }
 
+function formatBookmarkDate(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 function toggleBookmarksPanel() {
     if (!bookmarksPanel) return;
+    // Close highlights sidebar when opening bookmarks
+    document.getElementById('highlightsSidebar')?.classList.remove('visible');
     bookmarksPanel.classList.toggle('visible');
+    if (bookmarksPanel.classList.contains('visible')) {
+        renderBookmarksList();
+    }
+}
+
+function initBookmarkSidebarResize() {
+    const handle = document.getElementById('bkSidebarResize');
+    if (!handle || !bookmarksPanel) return;
+
+    let startX = 0;
+    let startWidth = 0;
+
+    function onMouseMove(e) {
+        if (!bkSidebarResizing) return;
+        const newWidth = Math.max(200, Math.min(600, startWidth + (e.clientX - startX)));
+        bookmarksPanel.style.width = newWidth + 'px';
+    }
+
+    function onMouseUp() {
+        if (!bkSidebarResizing) return;
+        bkSidebarResizing = false;
+        handle.classList.remove('active');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        bkSidebarResizing = true;
+        startX = e.clientX;
+        startWidth = bookmarksPanel.offsetWidth;
+        handle.classList.add('active');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
 }
 
 function triggerShadow(direction) {
@@ -1266,6 +1364,9 @@ function showInput() {
     updateSaveButton();
     cleanupAudio();
     currentBookmarks = [];
+    if (bookmarksPanel) bookmarksPanel.classList.remove('visible');
+    if (bookmarkSearchInput) bookmarkSearchInput.value = '';
+    updateBookmarkButton();
     chapterMap = null;
     clearHighlights();
 }
@@ -1564,6 +1665,18 @@ function handleKeydown(e) {
             e.preventDefault();
             toggleFullscreen();
             break;
+        case 'b':
+        case 'B':
+            // Don't trigger if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') break;
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                toggleBookmarksPanel();
+            } else {
+                e.preventDefault();
+                toggleBookmark();
+            }
+            break;
     }
 }
 
@@ -1785,6 +1898,7 @@ export function initReader() {
     bookmarksPanel = document.getElementById('bookmarksPanel');
     bookmarksList = document.getElementById('bookmarksList');
     bookmarksEmpty = document.getElementById('bookmarksEmpty');
+    bookmarkSearchInput = document.getElementById('bookmarkSearchInput');
 
     // Restore persisted preferences
     const savedFs = parseInt(localStorage.getItem('reader-fs'));
@@ -1938,6 +2052,14 @@ export function initReader() {
             bookmarksPanel.classList.remove('visible');
         });
     }
+
+    // Bookmark search input filters list
+    if (bookmarkSearchInput) {
+        bookmarkSearchInput.addEventListener('input', renderBookmarksList);
+    }
+
+    // Bookmark sidebar resize handle
+    initBookmarkSidebarResize();
 
     // Navigate-to-element custom event (from highlight manager)
     if (flipContent) {

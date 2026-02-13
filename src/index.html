@@ -105,7 +105,7 @@
                 <span class="save-label">Save</span>
             </button>
             <div class="tb-divider"></div>
-            <button class="tb-toggle" id="bookmarkToggle" title="Bookmark this page">
+            <button class="tb-toggle" id="bookmarkToggle" title="Bookmark this page (B)">
                 <span id="bookmarkIcon">&#9872;</span>
                 <span class="bookmark-count" id="bookmarkCount"></span>
             </button>
@@ -197,14 +197,18 @@
             </div>
         </div>
 
-        <!-- Bookmarks dropdown -->
-        <div class="bookmarks-panel" id="bookmarksPanel">
-            <div class="bookmarks-header">
-                <span class="bookmarks-title">Bookmarks</span>
-                <button class="bookmarks-close" id="bookmarksPanelClose">&#10005;</button>
+        <!-- Bookmarks sidebar (left) -->
+        <div class="bookmarks-sidebar" id="bookmarksPanel">
+            <div class="bk-sidebar-header">
+                <span class="bk-sidebar-title">Bookmarks</span>
+                <button class="bk-sidebar-close" id="bookmarksPanelClose">&#10005;</button>
             </div>
-            <div class="bookmarks-list" id="bookmarksList"></div>
-            <div class="bookmarks-empty" id="bookmarksEmpty">No bookmarks yet</div>
+            <div class="bk-sidebar-search">
+                <input type="text" class="bk-search-input" id="bookmarkSearchInput" placeholder="Search bookmarks..." />
+            </div>
+            <div class="bk-sidebar-list" id="bookmarksList"></div>
+            <div class="bk-sidebar-empty" id="bookmarksEmpty">No bookmarks yet</div>
+            <div class="bk-sidebar-resize" id="bkSidebarResize"></div>
         </div>
 
         <!-- Highlight color popup (shown on text selection) -->
