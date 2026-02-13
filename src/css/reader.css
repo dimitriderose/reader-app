@@ -265,6 +265,73 @@ textarea.text-input {
 }
 
 /* ----------------------------------------
+   READER TOOLS MENU (☰ dropdown)
+   ---------------------------------------- */
+.reader-menu-wrap {
+    position: relative;
+}
+
+.reader-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    z-index: 100;
+    padding: 6px 0;
+    flex-direction: column;
+}
+
+.reader-menu.visible { display: flex; }
+
+.rm-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    text-align: left;
+    width: 100%;
+}
+
+.rm-item:hover { background: var(--surface-2); }
+
+.rm-icon {
+    width: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.rm-label { flex: 1; }
+
+.rm-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 12px;
+}
+
+/* Bookmark toggle in toolbar needs relative positioning for count badge */
+#bookmarkToggle {
+    position: relative;
+}
+
+#bookmarkToggle.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+}
+
+/* ----------------------------------------
    SAVE / BOOKMARK BUTTON
    ---------------------------------------- */
 .save-btn {
@@ -1049,4 +1116,532 @@ mark.audio-highlight {
 @media (max-width: 400px) {
     .audio-voice-select { display: none; }
     .audio-controls-right { gap: 4px; }
+}
+
+/* ----------------------------------------
+   READING TIME ESTIMATE
+   ---------------------------------------- */
+.tb-reading-time {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0.8;
+}
+
+/* ----------------------------------------
+   FULLSCREEN MODE
+   ---------------------------------------- */
+:fullscreen .header { display: none; }
+:fullscreen #readerView { height: 100vh; }
+:fullscreen .flipbook-page { max-width: none; }
+
+/* ----------------------------------------
+   NIGHT THEME — blue light filter
+   ---------------------------------------- */
+[data-theme="night"] .flipbook-content {
+    filter: sepia(8%) saturate(85%);
+}
+
+[data-theme="night"] mark.audio-highlight {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ----------------------------------------
+   BOTTOM BAR — layout update
+   ---------------------------------------- */
+.bottom-bar-left,
+.bottom-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 80px;
+}
+
+.bottom-bar-right {
+    justify-content: flex-end;
+}
+
+.chapter-indicator {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* Bottom bar buttons (bookmark, highlights) */
+.bb-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 0.85rem;
+}
+
+.bb-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.bb-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+}
+
+.bb-btn {
+    position: relative;
+}
+
+.bb-icon {
+    line-height: 1;
+}
+
+.bookmark-count {
+    display: none;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--save-color);
+    color: var(--bg);
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 7px;
+    padding: 0 3px;
+    pointer-events: auto;
+}
+
+.bookmark-count.visible {
+    display: block;
+}
+
+/* ----------------------------------------
+   BOOKMARKS SIDEBAR (LEFT)
+   ---------------------------------------- */
+.bookmarks-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100%;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 16px rgba(0,0,0,0.08);
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.bookmarks-sidebar.visible {
+    transform: translateX(0);
+}
+
+.bk-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.bk-sidebar-title {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.bk-sidebar-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px;
+    line-height: 1;
+}
+
+.bk-sidebar-close:hover { color: var(--text); }
+
+/* Search bar */
+.bk-sidebar-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.bk-search-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.bk-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.bk-search-input:focus {
+    border-color: var(--accent);
+}
+
+/* Bookmark list */
+.bk-sidebar-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+}
+
+.bk-sidebar-list:empty + .bk-sidebar-empty { display: block; }
+
+.bk-sidebar-empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    display: none;
+}
+
+/* Individual bookmark item */
+.bookmark-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-family: var(--font-ui);
+    border-bottom: 1px solid var(--border);
+}
+
+.bookmark-item:last-child { border-bottom: none; }
+.bookmark-item:hover { background: var(--surface-2); }
+.bookmark-item.current-page { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+
+.bookmark-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.bookmark-item-page {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.bookmark-item-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookmark-item-date {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.bookmark-item-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+
+.bookmark-item:hover .bookmark-item-actions { opacity: 1; }
+
+.bookmark-item-action {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-ui);
+    transition: all 0.1s;
+}
+
+.bookmark-item-action:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.bookmark-item-action.delete:hover {
+    color: var(--error);
+}
+
+/* Resize handle (right edge) */
+.bk-sidebar-resize {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 26;
+}
+
+.bk-sidebar-resize:hover,
+.bk-sidebar-resize.active {
+    background: var(--accent);
+    opacity: 0.3;
+}
+
+/* ----------------------------------------
+   HIGHLIGHT POPUP (on text selection)
+   ---------------------------------------- */
+.highlight-popup {
+    position: absolute;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    z-index: 30;
+}
+
+.highlight-popup.visible {
+    display: flex;
+}
+
+.hl-color {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+}
+
+.hl-color:hover { transform: scale(1.2); }
+
+.hl-yellow { background: #FDE68A; }
+.hl-green { background: #86EFAC; }
+.hl-blue { background: #93C5FD; }
+.hl-pink { background: #FCA5A5; }
+
+.hl-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+}
+
+.hl-note-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+
+.hl-note-btn:hover { opacity: 1; }
+
+/* Text highlight marks */
+mark.user-highlight {
+    border-radius: 2px;
+    padding: 1px 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+mark.user-highlight[data-color="yellow"] { background: rgba(253, 230, 138, 0.5); }
+mark.user-highlight[data-color="green"] { background: rgba(134, 239, 172, 0.4); }
+mark.user-highlight[data-color="blue"] { background: rgba(147, 197, 253, 0.4); }
+mark.user-highlight[data-color="pink"] { background: rgba(252, 165, 165, 0.4); }
+
+[data-theme="dark"] mark.user-highlight[data-color="yellow"] { background: rgba(253, 230, 138, 0.25); }
+[data-theme="dark"] mark.user-highlight[data-color="green"] { background: rgba(134, 239, 172, 0.2); }
+[data-theme="dark"] mark.user-highlight[data-color="blue"] { background: rgba(147, 197, 253, 0.2); }
+[data-theme="dark"] mark.user-highlight[data-color="pink"] { background: rgba(252, 165, 165, 0.2); }
+
+[data-theme="night"] mark.user-highlight[data-color="yellow"] { background: rgba(253, 230, 138, 0.2); }
+[data-theme="night"] mark.user-highlight[data-color="green"] { background: rgba(134, 239, 172, 0.15); }
+[data-theme="night"] mark.user-highlight[data-color="blue"] { background: rgba(147, 197, 253, 0.15); }
+[data-theme="night"] mark.user-highlight[data-color="pink"] { background: rgba(252, 165, 165, 0.15); }
+
+/* ----------------------------------------
+   HIGHLIGHTS SIDEBAR
+   ---------------------------------------- */
+.highlights-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 16px rgba(0,0,0,0.08);
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.highlights-sidebar.visible {
+    transform: translateX(0);
+}
+
+.hl-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.hl-sidebar-title {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.hl-sidebar-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px;
+    line-height: 1;
+}
+
+.hl-sidebar-close:hover { color: var(--text); }
+
+.hl-sidebar-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 8px 0;
+}
+
+.hl-sidebar-list:empty + .hl-sidebar-empty { display: block; }
+
+.hl-sidebar-empty {
+    padding: 40px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    display: none;
+}
+
+.hl-sidebar-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.hl-sidebar-item:hover { background: var(--surface-2); }
+
+.hl-sidebar-item-text {
+    font-family: var(--font-reading);
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+    padding-left: 10px;
+    margin-bottom: 4px;
+}
+
+.hl-sidebar-item-text[data-color="yellow"] { border-left: 3px solid #FDE68A; }
+.hl-sidebar-item-text[data-color="green"] { border-left: 3px solid #86EFAC; }
+.hl-sidebar-item-text[data-color="blue"] { border-left: 3px solid #93C5FD; }
+.hl-sidebar-item-text[data-color="pink"] { border-left: 3px solid #FCA5A5; }
+
+.hl-sidebar-item-note {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 4px;
+    padding-left: 13px;
+}
+
+.hl-sidebar-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    padding-left: 13px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.hl-sidebar-item:hover .hl-sidebar-item-actions { opacity: 1; }
+
+.hl-sidebar-item-action {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.1s;
+}
+
+.hl-sidebar-item-action:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.hl-sidebar-item-action.delete:hover {
+    color: var(--error);
+}
+
+/* ----------------------------------------
+   READER EXPERIENCE — RESPONSIVE ADDITIONS
+   ---------------------------------------- */
+@media (max-width: 640px) {
+    .tb-reading-time { display: none; }
+    .tb-group-spacing { display: none; }
+    .tb-group-margins { display: none; }
+    #fullscreenBtn { display: none; }
+    .chapter-indicator { font-size: 0.6rem; }
+    .highlights-sidebar { width: 100%; }
+    .bookmarks-sidebar { width: 100%; }
+    .bk-sidebar-resize { display: none; }
+    .reader-menu { position: fixed; right: 8px; top: var(--toolbar-h); }
+    #readerMenuBtn { display: flex; }
+}
+
+@media (max-width: 400px) {
+    .bottom-bar-left { min-width: 40px; }
+    .bottom-bar-right { min-width: 40px; }
+    .bb-btn { width: 26px; height: 26px; font-size: 0.75rem; }
 }
